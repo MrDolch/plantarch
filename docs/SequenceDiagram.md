@@ -13,3 +13,6 @@ Reverse Engineering Software Code in Java toShow Method Level Dependencies:
 
 Intellij-Plugins:
 - https://stackoverflow.com/questions/17311797/how-to-generate-a-sequence-diagram-from-java-source-code
+
+Java Sequence Diagram Generator:
+- https://github.com/sherif181/java-sequence-diagram-generator
