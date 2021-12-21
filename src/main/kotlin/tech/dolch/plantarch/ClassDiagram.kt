@@ -25,9 +25,9 @@ open class ClassDiagram(
     private val containers: MutableMap<String?, Container> = HashMap()
     private val relations: MutableSet<Relation> = HashSet()
 
-    fun <T> analyzeClass(clazz: Class<T>?) = clazzToAnalyze.add(clazz)
+    open fun <T> analyzeClass(clazz: Class<T>?) = clazzToAnalyze.add(clazz)
 
-    fun analyzePackage(vararg packages: String) = ClassFileImporter()
+    open fun analyzePackage(vararg packages: String) = ClassFileImporter()
         .importPackages(*packages)
         .map { it.reflect() }
         .forEach { clazz -> analyzeClass(clazz) }
@@ -47,7 +47,7 @@ open class ClassDiagram(
         return factory.create(arrayOfNulls(0), arrayOfNulls(0), handler) as T
     }
 
-    fun toPlantuml(): String {
+    open fun toPlantuml(): String {
         with(ClassFileImporter().importClasses(clazzToAnalyze)) {
             // 1. Hierarchy
             forEach { addImplementRelation(it) }
@@ -212,7 +212,7 @@ open class ClassDiagram(
                             addRelation(Relation.of(source.reflect(), c, RelationType.AGGREGATE))
                     }
                 } catch (ignore: ClassNotFoundException) {
-                    ignore.printStackTrace()
+//                    ignore.printStackTrace()
                 }
             } else if (getContainer(t).isVisible())
                 addRelation(Relation.of(source, t, RelationType.COMPOSE))
