@@ -3,10 +3,36 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>9</version>
+    </parent>
+
     <groupId>tech.dolch.plantarch</groupId>
     <artifactId>plantarch</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
+
+    <name>${project.groupId}:${project.artifactId}</name>
+    <description>PlantArch is an easy configurable tool to generate diagrams from java classes.</description>
+    <url>https://github.com/MrDolch/plantarch</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Christoph Dolch</name>
+            <email>christoph@dolch.tech</email>
+            <organization>MrDolch</organization>
+            <organizationUrl>https://github.com/MrDolch</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -21,7 +47,7 @@
         <dependency>
             <groupId>com.tngtech.archunit</groupId>
             <artifactId>archunit</artifactId>
-            <version>0.22.0</version>
+            <version>0.23.1</version>
         </dependency>
         <dependency>
             <groupId>org.javassist</groupId>
@@ -72,7 +98,9 @@
     </dependencies>
 
     <build>
-        <plugins>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
+         <plugins>
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
@@ -84,13 +112,6 @@
                         <goals>
                             <goal>compile</goal>
                         </goals>
-                        <configuration>
-                            <sourceDirs>
-                                <source>src/main/java</source>
-                                <source>src/main/kotlin</source>
-                                <source>src/main/resources</source>
-                            </sourceDirs>
-                        </configuration>
                     </execution>
                     <execution>
                         <id>test-compile</id>
@@ -98,13 +119,6 @@
                         <goals>
                             <goal>test-compile</goal>
                         </goals>
-                        <configuration>
-                            <sourceDirs>
-                                <source>src/test/java</source>
-                                <source>src/test/kotlin</source>
-                                <source>src/test/resources</source>
-                            </sourceDirs>
-                        </configuration>
                     </execution>
                 </executions>
                 <configuration>
@@ -131,8 +145,74 @@
                     </execution>
                 </executions>
             </plugin>
+             <!-- https://central.sonatype.org/publish/publish-maven/#distribution-management-and-authentication -->
+             <plugin>
+                 <groupId>org.sonatype.plugins</groupId>
+                 <artifactId>nexus-staging-maven-plugin</artifactId>
+                 <version>1.6.12</version>
+                 <extensions>true</extensions>
+                 <configuration>
+                     <serverId>ossrh</serverId>
+                     <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                     <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                 </configuration>
+             </plugin>
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-source-plugin</artifactId>
+                 <executions>
+                     <execution>
+                         <id>attach-sources</id>
+                         <goals>
+                             <goal>jar-no-fork</goal>
+                         </goals>
+                     </execution>
+                 </executions>
+             </plugin>
+             <plugin>
+                 <artifactId>maven-assembly-plugin</artifactId>
+                 <configuration>
+                     <finalName>${project.artifactId}-${project.version}</finalName>
+                     <descriptors>
+                         <descriptor>javadoc.xml</descriptor>
+                     </descriptors>
+                 </configuration>
+                 <executions>
+                     <execution>
+                         <id>attach-javadoc</id>
+                         <phase>package</phase>
+                         <goals>
+                             <goal>single</goal>
+                         </goals>
+                     </execution>
+                 </executions>
+             </plugin>
+             <plugin>
+                 <groupId>org.apache.maven.plugins</groupId>
+                 <artifactId>maven-gpg-plugin</artifactId>
+                 <version>1.5</version>
+                 <executions>
+                     <execution>
+                         <id>sign-artifacts</id>
+                         <phase>verify</phase>
+                         <goals>
+                             <goal>sign</goal>
+                         </goals>
+                         <configuration>
+                             <keyname>${gpg.keyname}</keyname>
+                             <passphraseServerId>${gpg.keyname}</passphraseServerId>
+                         </configuration>
+                     </execution>
+                 </executions>
+             </plugin>
         </plugins>
     </build>
 
+    <distributionManagement>
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
 
 </project>
