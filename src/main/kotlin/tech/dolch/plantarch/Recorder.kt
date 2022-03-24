@@ -1,19 +1,18 @@
 package tech.dolch.plantarch
 
 import javassist.ClassPool
-import javassist.CtClass
 import javassist.Modifier
 import javassist.Translator
 import java.util.*
 
 open class Recorder(
     private val packagesToAnalyze: Set<String>,
+    private val hiddenParticipants: Set<String>,
 ) : Translator {
 
     override fun start(pool: ClassPool) {}
 
     companion object {
-        var deep: Int = 0
         val callers = Stack<String>()
         val recordedSequence = StringBuilder()
 
@@ -25,19 +24,18 @@ open class Recorder(
             val caller = callers.peek()
             recordedSequence.append("${simplify(caller)} -> ${simplify(className)}: $methodName\n")
             recordedSequence.append("activate ${simplify(className)}\n")
-            deep++
             callers.push(className);
         }
 
         fun leave(className: String, methodName: String) {
-            deep--
             callers.pop()
             val caller = callers.peek()
-            recordedSequence.append("${simplify(caller)} <-- ${simplify(className)}\n")
+//            recordedSequence.append("${simplify(caller)} <-- ${simplify(className)}\n")
             recordedSequence.append("deactivate ${simplify(className)}\n")
         }
 
         private fun simplify(className: String) = className
+//            .replaceBeforeLast('.', "").replace("$", "_").replace(".", "")
             .replaceBeforeLast('.', "").replace(".", "")
             .replaceAfterLast('$', "").replace("$", "")
 
@@ -46,21 +44,29 @@ open class Recorder(
         }
     }
 
+    private val instrumentedMethod = Stack<String>()
+
     override fun onLoad(pool: ClassPool, classname: String) {
         val ctClass = pool.getCtClass(classname)
-        if (packagesToAnalyze.contains(ctClass.packageName)) {
-            ctClass.methods
-                .filter { m -> !Modifier.isNative(m.modifiers) }
-                .filter { m -> !Modifier.isAbstract(m.modifiers) }
-                .filter { m -> !Modifier.isFinal(m.modifiers) }
-                .filter { m -> !Modifier.isPrivate(m.modifiers) }
-                .filter { m -> !m.declaringClass.isFrozen }
-                .forEach { m ->
-                    val className = (m.declaringClass as CtClass).name
-                    val methodName = m.name
+        if (!packagesToAnalyze.contains(ctClass.packageName)
+            || hiddenParticipants.contains(classname)
+        ) return
+        ctClass.methods
+            .filter { m -> !Modifier.isNative(m.modifiers) }
+            .filter { m -> !Modifier.isAbstract(m.modifiers) }
+            .filter { m -> !Modifier.isFinal(m.modifiers) }
+            .filter { m -> !Modifier.isPrivate(m.modifiers) }
+            .filter { m -> !m.declaringClass.isFrozen }
+            .forEach { m ->
+                val className = m.declaringClass.name
+                val methodName = m.name
+                val signatur = className + ":" + methodName + ":" + m.signature
+                if (!instrumentedMethod.contains(signatur)) {
+                    instrumentedMethod.add(signatur)
                     m.insertBefore("tech.dolch.plantarch.Recorder.Companion.enter(\"${className}\",\"${methodName}\");")
                     m.insertAfter("tech.dolch.plantarch.Recorder.Companion.leave(\"${className}\",\"${methodName}\");")
                 }
-        }
+            }
+
     }
 }
