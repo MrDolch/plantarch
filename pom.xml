@@ -38,7 +38,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.target>11</maven.compiler.target>
         <maven.compiler.source>11</maven.compiler.source>
-        <kotlin.version>1.6.0</kotlin.version>
+        <kotlin.version>1.6.10</kotlin.version>
         <junit-jupiter-engine.version>5.8.2</junit-jupiter-engine.version>
         <junit-platform-runner.version>1.8.2</junit-platform-runner.version>
     </properties>
