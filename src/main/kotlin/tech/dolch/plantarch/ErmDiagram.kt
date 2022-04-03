@@ -58,6 +58,10 @@ open class ErmDiagram(
                 + "\ntitle\n$name\nendtitle"
                 + "\ncaption\n$description\nendcaption"
                 + "\nskinparam linetype polyline\n@enduml")
+
+            // hierarchy
+            .replace(" *- ", " *-- ")
+            .replace(" o- ", " *-- ")
     }
 
     private fun renderDeclaration(c: Class<*>): String {
@@ -73,15 +77,6 @@ open class ErmDiagram(
             else -> "<<data>> #afa{\n" + c.declaredFields.joinToString("\n") { f -> f.name + ":" + f.type.simpleName } + "\n}"
         }
     }
-
-    private fun toPlantuml(container: Container): String = String
-        .format(
-            "object \"%s\" as %d #ccc{\n%s\n}\n",
-            container.name, container.id(), container.classes
-                .map { it.name }
-                .sorted()
-                .joinToString("\n")
-        )
 
     private fun toPlantuml(r: Relation): String {
         val sourceContainer = getContainer(r.source)
@@ -177,10 +172,10 @@ open class ErmDiagram(
                     containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) {
                         Container(it!!, isHidden = true)
                     }
-                else if (file.contains("/target/classes/"))
-                    containers.computeIfAbsent(
-                        file.replace(".*/([^/]+)/target/classes/.*".toRegex(), "$1")
-                    ) { Container(it!!, isHidden = true) }
+                else if (file.contains("/target/classes/") || file.contains("/target/test-classes/"))
+                    containers.computeIfAbsent(file.replace(".*/([^/]+)/target/(test-)?classes/.*".toRegex(), "$1")) {
+                        Container(it!!, isHidden = true)
+                    }
                 else UNKNOWN
             } else UNKNOWN
         } else UNKNOWN

@@ -1,6 +1,7 @@
 package tech.dolch.plantarch
 
 import org.junit.jupiter.api.Test
+import playground.erm.cars.Car
 import java.nio.file.Path
 
 internal class ErmDiagramTest {
@@ -12,12 +13,12 @@ internal class ErmDiagramTest {
     @Test
     fun testDiagram() {
         // add to diagram
-        testee.analyzePackage(ClassDiagram::class.java.packageName)
-        testee.analyzeClass(Relation::class.java)
+        testee.analyzePackage(Car::class.java.packageName)
+        testee.analyzeClass(Car::class.java)
 
         // expand container for details
-        testee.getContainer(ClassDiagram::class.java).isExpanded = true
-        testee.getContainer(ClassDiagram::class.java).isHidden = false
+        testee.getContainer(Car::class.java).isExpanded = true
+        testee.getContainer(Car::class.java).isHidden = false
 
         // render diagram
         val plantuml = testee.toPlantuml()
