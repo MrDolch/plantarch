@@ -39,6 +39,8 @@ open class ErmDiagram(
             // 2. DDD
             forEach { addCompositionRelations(it) }
         }
+        combineRelations()
+
         return ("@startuml\n"
                 // classes, enums, interfaces, and abstracts
                 + containers.values.filter { obj: Container -> obj.isVisible() }
@@ -55,10 +57,50 @@ open class ErmDiagram(
                 + "\ncaption\n$description\nendcaption"
                 + "\nskinparam linetype polyline\n@enduml")
 
-            // hierarchy
-            .replace(" *- ", " *-- ")
-            .replace(" o- ", " *-- ")
     }
+
+    private fun combineRelations() {
+        val doubleRelations = relations
+            .groupBy { sortedSetOf(it.source!!.name, it.target.name) }
+            .filterValues { it.size == 2 }
+            .values
+        doubleRelations.forEach { (r1, r2) ->
+            combiners
+                .filterValues { combiner -> combiner.first.contains(r1.type) }
+                .filterValues { combiner -> combiner.second.contains(r2.type) }
+                .firstNotNullOfOrNull { combiner ->
+                    if (relations.remove(r1) && relations.remove(r2))
+                        addRelation(Relation.of(r1.source,r1.target, combiner.key))
+                }
+            combiners
+                .filterValues { combiner -> combiner.second.contains(r1.type) }
+                .filterValues { combiner -> combiner.first.contains(r1.type) }
+                .firstNotNullOfOrNull { combiner ->
+                    if (relations.remove(r1) && relations.remove(r2))
+                        addRelation(Relation.of(r2.source, r2.target, combiner.key))
+                }
+            if (relations.contains(r1))
+                println("Combination not found: ${r1.type} / ${r2.type}\n   $r1\n   $r2")
+        }
+    }
+
+
+    private val combiners = mapOf(
+        Pair(
+            RelationType.EXACTLY_ONE_TO_ONE_OR_MANY, Pair(
+                arrayOf(RelationType.EXACTLY_ONE_TO_MANY, RelationType.EXACTLY_ONE_TO_ONE_OR_MANY),
+                arrayOf(RelationType.EXACTLY_ONE_TO_UNKNOWN, RelationType.ONE_OR_MANY_TO_EXACTLY_ONE)
+            )
+        ),
+        Pair(
+            RelationType.EXACTLY_ONE_TO_EXACTLY_ONE,
+            Pair(arrayOf(RelationType.EXACTLY_ONE_TO_UNKNOWN), arrayOf(RelationType.EXACTLY_ONE_TO_UNKNOWN))
+        ),
+        Pair(
+            RelationType.ONE_OR_MANY_TO_ONE_OR_MANY,
+            Pair(arrayOf(RelationType.EXACTLY_ONE_TO_MANY), arrayOf(RelationType.EXACTLY_ONE_TO_MANY))
+        )
+    )
 
     private fun renderDeclaration(c: Class<*>): String {
         val type = when {
