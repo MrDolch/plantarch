@@ -18,7 +18,7 @@ data class Relation(
             Relation(source = s, target = t, type = type)
 
         fun ofUserInteraction(p: Actor?, t: Class<*>, label: String?): Relation =
-            Relation(actor = p, target = t, label = label, type = RelationType.USERINTERACTION)
+            Relation(actor = p, target = t, label = label, type = RelationType.USER_INTERACTS)
 
         fun ofData(s: Class<*>?, t: Class<*>, type: RelationType): Relation =
             Relation(source = s, target = t, type = type)

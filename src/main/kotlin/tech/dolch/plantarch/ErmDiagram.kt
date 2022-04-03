@@ -1,13 +1,13 @@
 package tech.dolch.plantarch
 
 import com.tngtech.archunit.base.Optional
-import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import javassist.Modifier
 import java.lang.reflect.ParameterizedType
+import kotlin.reflect.jvm.kotlinProperty
 
 open class ErmDiagram(
     private val name: String = "",
@@ -35,13 +35,9 @@ open class ErmDiagram(
     open fun toPlantuml(): String {
         with(ClassFileImporter().importClasses(clazzToAnalyze)) {
             // 1. Hierarchy
-            forEach { addImplementRelation(it) }
-            forEach { addExtendRelation(it) }
+            forEach { addInheritanceRelations(it) }
             // 2. DDD
-            forEach { addCompositeRelation(it) }
-            // 3. Dependencies
-            forEach { addUseRelation(it) }
-            forEach { addUsedRelation(it) }
+            forEach { addCompositionRelations(it) }
         }
         return ("@startuml\n"
                 // classes, enums, interfaces, and abstracts
@@ -79,107 +75,100 @@ open class ErmDiagram(
     }
 
     private fun toPlantuml(r: Relation): String {
-        val sourceContainer = getContainer(r.source)
+        val sourceContainer = getContainer(r.source!!)
         val targetContainer = getContainer(r.target)
         if (targetContainer.isHidden) return ""
         return String.format(
             "%s ${r.arrow} %s",
-            r.source!!.name,
+            r.source.name,
             if (sourceContainer.isExpanded && targetContainer.isClosed()) targetContainer.id() else r.target.name
         )
     }
 
-    private fun addUseRelation(source: JavaClass) = listOf(source)
-        .filter { s -> getContainer(s).isVisible() }
-        .flatMap { s -> s.allAccessesFromSelf }
-        .map { a -> a.targetOwner }
-        .distinct()
-        .filter { t -> source != t }
-        .filter { t -> !t.isAssignableFrom(source.reflect()) }
-        .filter { t -> getContainer(t).isVisible() }
-        .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
-        .forEach { t -> addRelation(Relation.of(source, t, RelationType.USE)) }
-
-    private fun addUsedRelation(source: JavaClass) = listOf(source)
-        .filter { s: JavaClass -> getContainer(s).isVisible() }
-        .flatMap { obj: JavaClass -> obj.accessesToSelf }
-        .map { obj: JavaAccess<*> -> obj.targetOwner }
-        .filter { t: JavaClass -> !source.isAssignableFrom(t.reflect()) }
-        .filter { t: JavaClass -> getContainer(t).isVisible() }
-        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.USED)) }
-
-    private fun addImplementRelation(source: JavaClass) = listOf(source)
-        .filter { s: JavaClass -> getContainer(s).isVisible() }
-        .flatMap { obj: JavaClass -> obj.interfaces }
-        .map { obj: JavaType -> obj.toErasure() }
-        .filter { t: JavaClass -> getContainer(t).isVisible() }
-        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENT)) }
-
-    private fun addExtendRelation(source: JavaClass) {
+    private fun addInheritanceRelations(source: JavaClass) {
+        listOf(source)
+            .filter { s: JavaClass -> getContainer(s).isVisible() }
+            .flatMap { obj: JavaClass -> obj.interfaces }
+            .map { obj: JavaType -> obj.toErasure() }
+            .filter { t: JavaClass -> getContainer(t).isVisible() }
+            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .map { obj: JavaClass -> obj.superclass }
             .flatMap { obj: Optional<JavaType?> -> obj.asSet() }
             .map { obj -> obj!!.toErasure() }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
-            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTEND)) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .filter { s: JavaClass -> !s.isInterface }
             .flatMap { obj: JavaClass -> obj.allSubclasses }
             .map { obj: JavaClass -> obj.toErasure() }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
-            .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTEND)) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
 
-    private fun addCompositeRelation(source: JavaClass) = listOf(source)
+    private fun addCompositionRelations(source: JavaClass) = listOf(source)
         .filter { getContainer(it).isVisible() }
-        .filter { s -> s.reflect().kotlin.isData }
+        .filter { s -> isEntity(s) }
         .flatMap { it.allFields }
-        .forEach { f: JavaField ->
-            val t = f.rawType
-            if (MutableCollection::class.java.isAssignableFrom(t.reflect())) {
-                val genericType = f.reflect().genericType
-                try {
-                    for (ta in (genericType as ParameterizedType).actualTypeArguments) {
-                        val c = Class.forName(ta.typeName)
-                        if (getContainer(c).isVisible())
-                            addRelation(Relation.of(source.reflect(), c, RelationType.AGGREGATE))
+        .forEach { jf: JavaField ->
+            val t = jf.rawType
+            val f = jf.reflect()
+            val srcIsNullable = f.kotlinProperty?.returnType?.isMarkedNullable ?: false
+            when {
+                MutableCollection::class.java.isAssignableFrom(t.reflect()) -> {
+                    for (ta in (f.genericType as ParameterizedType).actualTypeArguments) {
+                        try {
+                            val genericType = Class.forName(ta.typeName)
+                            if (getContainer(genericType).isVisible()) {
+                                val toMany =
+                                    if (srcIsNullable) RelationType.ZERO_OR_ONE_TO_MANY
+                                    else RelationType.EXACTLY_ONE_TO_MANY
+                                addRelation(Relation.of(source.reflect(), genericType, toMany))
+                            }
+                        } catch (ignore: ClassNotFoundException) {
+                        }
                     }
-                } catch (ignore: ClassNotFoundException) {
-//                    ignore.printStackTrace()
                 }
-            } else if (getContainer(t).isVisible())
-                addRelation(Relation.of(source, t, RelationType.COMPOSE))
+                getContainer(t).isVisible() -> {
+                    val toZeroOrOne =
+                        if (srcIsNullable) RelationType.ZERO_OR_ONE_TO_UNKNOWN
+                        else RelationType.EXACTLY_ONE_TO_UNKNOWN
+                    addRelation(Relation.of(source, t, toZeroOrOne))
+                }
+            }
         }
+
+    private fun isEntity(c: JavaClass): Boolean =
+        c.reflect().kotlin.isData || c.annotations.map { a -> "Entity" == a.javaClass.simpleName }.any()
 
     private fun getContainer(clazz: JavaClass): Container = getContainer(clazz.reflect())
 
-    fun getContainer(clazz: Class<*>?): Container {
-        val result: Container = if (clazz != null
-            && !clazz.isAnonymousClass
-            && !clazz.isMemberClass
-            && !clazz.isSynthetic
-            && !clazz.isLocalClass
-        ) {
-            val resource = clazz.getResource("/" + clazz.name.replace('.', '/') + ".class")
-            if (resource != null) {
-                val protocol = resource.protocol
-                val file = resource.file
-                if ("jrt" == protocol)
+    fun getContainer(clazz: Class<*>): Container {
+        val resource = clazz.getResource("/" + clazz.name.replace('.', '/') + ".class")
+        val protocol = resource?.protocol
+        val file = resource?.file
+        val result: Container =
+            when {
+                clazz.isAnonymousClass -> UNKNOWN
+                clazz.isMemberClass -> UNKNOWN
+                clazz.isSynthetic -> UNKNOWN
+                clazz.isLocalClass -> UNKNOWN
+                resource == null -> UNKNOWN
+                "jrt" == protocol ->
                     containers.computeIfAbsent("jrt") { name -> Container(name!!, isHidden = true) }
-                else if (file.startsWith("file:"))
+                file!!.startsWith("file:") ->
                     containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) {
                         Container(it!!, isHidden = true)
                     }
-                else if (file.contains("/target/classes/") || file.contains("/target/test-classes/"))
+                file.matches(".*/([^/]+)/target/(test-)?classes/.*".toRegex()) ->
                     containers.computeIfAbsent(file.replace(".*/([^/]+)/target/(test-)?classes/.*".toRegex(), "$1")) {
                         Container(it!!, isHidden = true)
                     }
-                else UNKNOWN
-            } else UNKNOWN
-        } else UNKNOWN
-        result.addClass(clazz!!)
+                else -> UNKNOWN
+            }
+        result.addClass(clazz)
         return result
     }
 

@@ -133,7 +133,7 @@ open class ClassDiagram(
         ) return ""
         return if ((userContainer.isVisible() || sourceContainer.isExpanded) && targetContainer.isClosed()) {
             when (r.type) {
-                RelationType.USERINTERACTION -> String.format(
+                RelationType.USER_INTERACTS -> String.format(
                     "%s ${r.arrow} %s : %s",
                     r.actor!!.name, targetContainer.id(), r.label
                 )
@@ -143,7 +143,7 @@ open class ClassDiagram(
                 )
             }
         } else when (r.type) {
-            RelationType.USERINTERACTION -> String.format(
+            RelationType.USER_INTERACTS -> String.format(
                 "%s ${r.arrow} %s : %s",
                 r.actor!!.name, r.target.name, r.label
             )
@@ -163,7 +163,7 @@ open class ClassDiagram(
         .filter { t -> !t.isAssignableFrom(source.reflect()) }
         .filter { t -> getContainer(t).isVisible() }
         .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
-        .forEach { t -> addRelation(Relation.of(source, t, RelationType.USE)) }
+        .forEach { t -> addRelation(Relation.of(source, t, RelationType.USES)) }
 
     private fun addUsedRelation(source: JavaClass) = listOf(source)
         .filter { s: JavaClass -> getContainer(s).isVisible() }
@@ -178,7 +178,7 @@ open class ClassDiagram(
         .flatMap { obj: JavaClass -> obj.interfaces }
         .map { obj: JavaType -> obj.toErasure() }
         .filter { t: JavaClass -> getContainer(t).isVisible() }
-        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENT)) }
+        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
 
     private fun addExtendRelation(source: JavaClass) {
         listOf(source)
@@ -187,14 +187,14 @@ open class ClassDiagram(
             .flatMap { obj: Optional<JavaType?> -> obj.asSet() }
             .map { obj -> obj!!.toErasure() }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
-            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTEND)) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .filter { s: JavaClass -> !s.isInterface }
             .flatMap { obj: JavaClass -> obj.allSubclasses }
             .map { obj: JavaClass -> obj.toErasure() }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
-            .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTEND)) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
 
     private fun addCompositeRelation(source: JavaClass) = listOf(source)
@@ -209,13 +209,13 @@ open class ClassDiagram(
                     for (ta in (genericType as ParameterizedType).actualTypeArguments) {
                         val c = Class.forName(ta.typeName)
                         if (getContainer(c).isVisible())
-                            addRelation(Relation.of(source.reflect(), c, RelationType.AGGREGATE))
+                            addRelation(Relation.of(source.reflect(), c, RelationType.AGGREGATES))
                     }
                 } catch (ignore: ClassNotFoundException) {
 //                    ignore.printStackTrace()
                 }
             } else if (getContainer(t).isVisible())
-                addRelation(Relation.of(source, t, RelationType.COMPOSE))
+                addRelation(Relation.of(source, t, RelationType.COMPOSES))
         }
 
     private fun getContainer(clazz: JavaClass): Container = getContainer(clazz.reflect())

@@ -11,7 +11,7 @@ internal class ErmDiagramTest {
     )
 
     @Test
-    fun testDiagram() {
+    fun testPojosDiagram() {
         // add to diagram
         testee.analyzePackage(Car::class.java.packageName)
         testee.analyzeClass(Car::class.java)
@@ -24,6 +24,25 @@ internal class ErmDiagramTest {
         val plantuml = testee.toPlantuml()
         println(plantuml)
         Path.of("target", "ERM Diagram.puml")
+            .toFile().writer().use {
+                it.write(plantuml)
+            }
+    }
+
+    @Test
+    fun testJpaDiagram() {
+        // add to diagram
+        testee.analyzePackage(playground.erm.jpa.Car::class.java.packageName)
+        testee.analyzeClass(playground.erm.jpa.Car::class.java)
+
+        // expand container for details
+        testee.getContainer(playground.erm.jpa.Car::class.java).isExpanded = true
+        testee.getContainer(playground.erm.jpa.Car::class.java).isHidden = false
+
+        // render diagram
+        val plantuml = testee.toPlantuml()
+        println(plantuml)
+        Path.of("target", "JPA Diagram.puml")
             .toFile().writer().use {
                 it.write(plantuml)
             }
