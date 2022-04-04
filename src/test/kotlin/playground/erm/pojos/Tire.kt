@@ -1,3 +1,3 @@
-package playground.erm.cars
+package playground.erm.pojos
 
 data class Tire(val size: Int)

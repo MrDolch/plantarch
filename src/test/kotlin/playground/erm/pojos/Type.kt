@@ -1,4 +1,4 @@
-package playground.erm.cars
+package playground.erm.pojos
 
 enum class Type {
     CONVERTIBLE,

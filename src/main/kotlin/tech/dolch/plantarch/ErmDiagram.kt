@@ -66,15 +66,15 @@ open class ErmDiagram(
             .values
         doubleRelations.forEach { (r1, r2) ->
             combiners
-                .filterValues { combiner -> combiner.first.contains(r1.type) }
-                .filterValues { combiner -> combiner.second.contains(r2.type) }
+                .filterValues { it.first.contains(r1.type) }
+                .filterValues { it.second.contains(r2.type) }
                 .firstNotNullOfOrNull { combiner ->
                     if (relations.remove(r1) && relations.remove(r2))
                         addRelation(Relation.of(r1.source,r1.target, combiner.key))
                 }
             combiners
-                .filterValues { combiner -> combiner.second.contains(r1.type) }
-                .filterValues { combiner -> combiner.first.contains(r1.type) }
+                .filterValues { it.first.contains(r2.type) }
+                .filterValues { it.second.contains(r1.type) }
                 .firstNotNullOfOrNull { combiner ->
                     if (relations.remove(r1) && relations.remove(r2))
                         addRelation(Relation.of(r2.source, r2.target, combiner.key))

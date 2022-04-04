@@ -1,8 +1,10 @@
 package tech.dolch.plantarch
 
 import org.junit.jupiter.api.Test
-import playground.erm.cars.Car
 import java.nio.file.Path
+import kotlin.test.assertContains
+import playground.erm.jpa.Car as jpa_Car
+import playground.erm.pojos.Car as pojo_Car
 
 internal class ErmDiagramTest {
     private val testee = ErmDiagram(
@@ -13,12 +15,12 @@ internal class ErmDiagramTest {
     @Test
     fun testPojosDiagram() {
         // add to diagram
-        testee.analyzePackage(Car::class.java.packageName)
-        testee.analyzeClass(Car::class.java)
+        testee.analyzePackage(pojo_Car::class.java.packageName)
+        testee.analyzeClass(pojo_Car::class.java)
 
         // expand container for details
-        testee.getContainer(Car::class.java).isExpanded = true
-        testee.getContainer(Car::class.java).isHidden = false
+        testee.getContainer(pojo_Car::class.java).isExpanded = true
+        testee.getContainer(pojo_Car::class.java).isHidden = false
 
         // render diagram
         val plantuml = testee.toPlantuml()
@@ -27,17 +29,22 @@ internal class ErmDiagramTest {
             .toFile().writer().use {
                 it.write(plantuml)
             }
+
+        // assert
+        assertContains(plantuml, "playground.erm.pojos.Car ||-- playground.erm.pojos.Manufacturer")
+        assertContains(plantuml, "playground.erm.pojos.Car ||-- playground.erm.pojos.Type")
+        assertContains(plantuml, "playground.erm.pojos.Car ||--{ playground.erm.pojos.Tire")
     }
 
     @Test
     fun testJpaDiagram() {
         // add to diagram
-        testee.analyzePackage(playground.erm.jpa.Car::class.java.packageName)
-        testee.analyzeClass(playground.erm.jpa.Car::class.java)
+        testee.analyzePackage(jpa_Car::class.java.packageName)
+        testee.analyzeClass(jpa_Car::class.java)
 
         // expand container for details
-        testee.getContainer(playground.erm.jpa.Car::class.java).isExpanded = true
-        testee.getContainer(playground.erm.jpa.Car::class.java).isHidden = false
+        testee.getContainer(jpa_Car::class.java).isExpanded = true
+        testee.getContainer(jpa_Car::class.java).isHidden = false
 
         // render diagram
         val plantuml = testee.toPlantuml()
@@ -46,5 +53,14 @@ internal class ErmDiagramTest {
             .toFile().writer().use {
                 it.write(plantuml)
             }
+
+        // assert
+        assertContains(plantuml, "playground.erm.jpa.Car .up.|> playground.erm.jpa.Vehicle")
+        assertContains(plantuml, "playground.erm.jpa.Car ||--|{ playground.erm.jpa.Seat")
+        assertContains(plantuml, "playground.erm.jpa.Car ||--|| playground.erm.jpa.Engine")
+        assertContains(plantuml, "playground.erm.jpa.Car }|--|{ playground.erm.jpa.Driver")
+        assertContains(plantuml, "playground.erm.jpa.Driver -up-|> playground.erm.jpa.Person")
+        assertContains(plantuml, "playground.erm.jpa.Owner -up-|> playground.erm.jpa.Person")
+        assertContains(plantuml, "playground.erm.jpa.Owner ||--|{ playground.erm.jpa.Car")
     }
 }
