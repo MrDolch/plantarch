@@ -6,13 +6,15 @@ import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import javassist.Modifier
+import java.lang.IllegalArgumentException
 import java.lang.reflect.ParameterizedType
 import kotlin.reflect.jvm.kotlinProperty
 
 open class ErmDiagram(
     private val name: String = "",
     private val description: String = "",
-    private val clazzToAnalyze: MutableSet<Class<*>?> = HashSet()
+    private val clazzToAnalyze: MutableSet<Class<*>> = HashSet(),
+    private val markerInterfaces: MutableSet<Class<*>> = HashSet()
 ) {
     companion object {
         private val UNKNOWN = Container("unknown", isHidden = true)
@@ -21,7 +23,11 @@ open class ErmDiagram(
     private val containers: MutableMap<String?, Container> = HashMap()
     private val relations: MutableSet<Relation> = HashSet()
 
-    open fun <T> analyzeClass(clazz: Class<T>?) = clazzToAnalyze.add(clazz)
+    open fun <T> analyzeClass(clazz: Class<T>) = clazzToAnalyze.add(clazz)
+
+    open fun <T> addMarkerInterface(clazz: Class<T>) =
+        if (clazz.isInterface) markerInterfaces.add(clazz)
+        else throw IllegalArgumentException("$clazz is not an Interface.")
 
     open fun analyzePackage(vararg packages: String) = ClassFileImporter()
         .importPackages(*packages)
@@ -33,7 +39,8 @@ open class ErmDiagram(
     }
 
     open fun toPlantuml(): String {
-        with(ClassFileImporter().importClasses(clazzToAnalyze)) {
+        val javaClasses = ClassFileImporter().importClasses(clazzToAnalyze).sortedBy { it.fullName }
+        with(javaClasses) {
             // 1. Hierarchy
             forEach { addInheritanceRelations(it) }
             // 2. DDD
@@ -70,7 +77,7 @@ open class ErmDiagram(
                 .filterValues { it.second.contains(r2.type) }
                 .firstNotNullOfOrNull { combiner ->
                     if (relations.remove(r1) && relations.remove(r2))
-                        addRelation(Relation.of(r1.source,r1.target, combiner.key))
+                        addRelation(Relation.of(r1.source, r1.target, combiner.key))
                 }
             combiners
                 .filterValues { it.first.contains(r2.type) }
@@ -103,16 +110,20 @@ open class ErmDiagram(
     )
 
     private fun renderDeclaration(c: Class<*>): String {
+        if (markerInterfaces.contains(c)) return "";
         val type = when {
             c.isInterface -> "interface"
             Modifier.isAbstract(c.modifiers) -> "abstract"
             c.isEnum -> "enum"
             else -> "class"
         }
+        val ms = markerInterfaces.filter { it.isAssignableFrom(c) }
+        val marker = if (ms.isEmpty()) "" else ms.joinToString(", ", "<<", ">>") { it.simpleName }
+
         return type + " " + c.name + when {
             !clazzToAnalyze.contains(c) -> " #ccc"
-            c.isEnum -> "<<data>> #afa{\n" + c.enumConstants.joinToString("\n") + "\n}"
-            else -> "<<data>> #afa{\n" + c.declaredFields.joinToString("\n") { f -> f.name + ":" + f.type.simpleName } + "\n}"
+            c.isEnum -> "$marker #afa{\n" + c.enumConstants.joinToString("\n") + "\n}"
+            else -> "$marker #afa{\n" + c.declaredFields.joinToString("\n") { f -> f.name + ":" + f.type.simpleName } + "\n}"
         }
     }
 
@@ -132,6 +143,7 @@ open class ErmDiagram(
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .flatMap { obj: JavaClass -> obj.interfaces }
             .map { obj: JavaType -> obj.toErasure() }
+            .filter { !markerInterfaces.contains(it.reflect()) }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
             .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
         listOf(source)

@@ -1,6 +1,7 @@
 package tech.dolch.plantarch
 
 import org.junit.jupiter.api.Test
+import playground.erm.jpa.Vehicle
 import java.nio.file.Path
 import kotlin.test.assertContains
 import playground.erm.jpa.Car as jpa_Car
@@ -41,6 +42,7 @@ internal class ErmDiagramTest {
         // add to diagram
         testee.analyzePackage(jpa_Car::class.java.packageName)
         testee.analyzeClass(jpa_Car::class.java)
+        testee.addMarkerInterface(Vehicle::class.java)
 
         // expand container for details
         testee.getContainer(jpa_Car::class.java).isExpanded = true
@@ -55,7 +57,6 @@ internal class ErmDiagramTest {
             }
 
         // assert
-        assertContains(plantuml, "playground.erm.jpa.Car .up.|> playground.erm.jpa.Vehicle")
         assertContains(plantuml, "playground.erm.jpa.Car ||--|{ playground.erm.jpa.Seat")
         assertContains(plantuml, "playground.erm.jpa.Car ||--|| playground.erm.jpa.Engine")
         assertContains(plantuml, "playground.erm.jpa.Car }|--|{ playground.erm.jpa.Driver")
