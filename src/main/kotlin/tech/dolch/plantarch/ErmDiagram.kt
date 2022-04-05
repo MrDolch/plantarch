@@ -195,7 +195,9 @@ open class ErmDiagram(
         }
 
     private fun isEntity(c: JavaClass): Boolean =
-        c.reflect().kotlin.isData || c.annotations.map { a -> "Entity" == a.javaClass.simpleName }.any()
+        c.reflect().kotlin.isData
+                || c.simpleName.endsWith("Entity") || c.simpleName.endsWith("Dto")
+                || c.annotations.map { a -> "Entity" == a.javaClass.simpleName }.any()
 
     private fun getContainer(clazz: JavaClass): Container = getContainer(clazz.reflect())
 
