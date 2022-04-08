@@ -48,6 +48,15 @@ open class ErmDiagram(
         }
         combineRelations()
 
+        // a->b->c && a->c
+        val toRemove = relations.filter { it.type == RelationType.EXTENDS || it.type == RelationType.IMPLEMENTS }
+            .filter {
+                relations.filter { r -> r.source == it.source }
+                    .filter { r -> r.target != it.target }
+                    .any { r -> it.target.isAssignableFrom(r.target) }
+            }.toSet()
+        relations.removeAll(toRemove)
+
         return ("@startuml\n"
                 // classes, enums, interfaces, and abstracts
                 + containers.values.filter { obj: Container -> obj.isVisible() }
@@ -165,7 +174,7 @@ open class ErmDiagram(
     private fun addCompositionRelations(source: JavaClass) = listOf(source)
         .filter { getContainer(it).isVisible() }
         .filter { s -> isEntity(s) }
-        .flatMap { it.allFields }
+        .flatMap { it.fields }
         .forEach { jf: JavaField ->
             val t = jf.rawType
             val f = jf.reflect()

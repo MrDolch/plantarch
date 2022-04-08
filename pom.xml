@@ -11,7 +11,7 @@
 
     <groupId>tech.dolch.plantarch</groupId>
     <artifactId>plantarch</artifactId>
-    <version>0.0.8</version>
+    <version>0.0.9</version>
     <packaging>jar</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
