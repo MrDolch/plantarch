@@ -176,19 +176,14 @@
                 </executions>
             </plugin>
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <finalName>${project.artifactId}-${project.version}</finalName>
-                    <descriptors>
-                        <descriptor>javadoc.xml</descriptor>
-                    </descriptors>
-                </configuration>
+                <groupId>org.jetbrains.dokka</groupId>
+                <artifactId>dokka-maven-plugin</artifactId>
+                <version>1.9.20</version>
                 <executions>
                     <execution>
-                        <id>attach-javadoc</id>
-                        <phase>package</phase>
+                        <phase>pre-site</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>dokka</goal>
                         </goals>
                     </execution>
                 </executions>
