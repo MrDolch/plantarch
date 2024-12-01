@@ -1,6 +1,5 @@
 package tech.dolch.plantarch
 
-import com.tngtech.archunit.base.Optional
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
@@ -158,8 +157,9 @@ open class ErmDiagram(
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .map { obj: JavaClass -> obj.superclass }
-            .flatMap { obj: Optional<JavaType?> -> obj.asSet() }
-            .map { obj -> obj!!.toErasure() }
+            .filter { it.isPresent }
+            .map { it.get() }
+            .filterIsInstance<JavaClass>()
             .filter { t: JavaClass -> getContainer(t).isVisible() }
             .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
         listOf(source)

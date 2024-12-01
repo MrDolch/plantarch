@@ -1,6 +1,5 @@
 package tech.dolch.plantarch
 
-import com.tngtech.archunit.base.Optional
 import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
@@ -184,10 +183,11 @@ open class ClassDiagram(
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .map { obj: JavaClass -> obj.superclass }
-            .flatMap { obj: Optional<JavaType?> -> obj.asSet() }
-            .map { obj -> obj!!.toErasure() }
-            .filter { t: JavaClass -> getContainer(t).isVisible() }
-            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
+            .filter { it.isPresent }
+            .map { it.get() }
+            .filterIsInstance<JavaClass>()
+            .filter { t -> getContainer(t).isVisible() }
+            .forEach { t -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .filter { s: JavaClass -> !s.isInterface }
