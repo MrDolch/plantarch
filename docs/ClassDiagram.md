@@ -3,7 +3,7 @@
 ## General purpose
 
 It generates a PlantUML Component Diagrams to show the dependencies of libraries, packages and classes.
-It is configurable which conponents are shown.
+It is configurable which components are shown.
 
 ## Resources
 
