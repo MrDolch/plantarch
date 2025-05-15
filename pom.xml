@@ -4,7 +4,7 @@
 
     <groupId>io.github.mrdolch</groupId>
     <artifactId>plantarch</artifactId>
-    <version>0.1.1-SNAPSHOT</version>
+    <version>0.1.1</version>
     <packaging>jar</packaging>
 
     <name>PlantArch</name>
@@ -239,7 +239,7 @@
     <scm>
         <url>https://github.com/mrdolch/plantarch</url>
         <connection>scm:git:https://github.com/mrdolch/plantarch.git</connection>
-        <tag>HEAD</tag>
+        <tag>plantarch-0.1.1</tag>
     </scm>
 
 </project>
