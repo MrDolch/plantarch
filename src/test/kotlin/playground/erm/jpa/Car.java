@@ -16,4 +16,11 @@ public class Car implements Vehicle {
     @OneToMany(orphanRemoval = true)
     private List<Seat> seats;
 
+    public Sex getSex() {
+        return owner.sex;
+    }
+
+    public void setFuel(Fuel fuel) {
+        engine.fuel = fuel;
+    }
 }

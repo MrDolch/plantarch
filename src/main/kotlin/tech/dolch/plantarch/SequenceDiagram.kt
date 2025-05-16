@@ -74,7 +74,7 @@ open class SequenceDiagram(
         }
             .forEach(this.participants::add)
 
-        participants.map { c -> c.packageName }.distinct().forEach(packagesToAnalyze::add)
+        participants.map { c -> c.`package`.name }.distinct().forEach(packagesToAnalyze::add)
     }
 
     fun addHiddenParticipants(vararg participants: Class<*>) {

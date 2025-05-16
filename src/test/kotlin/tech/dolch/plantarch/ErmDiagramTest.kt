@@ -2,7 +2,7 @@ package tech.dolch.plantarch
 
 import org.junit.jupiter.api.Test
 import playground.erm.jpa.Vehicle
-import java.nio.file.Path
+import java.nio.file.Paths
 import kotlin.test.assertContains
 import playground.erm.jpa.Car as jpa_Car
 import playground.erm.pojos.Car as pojo_Car
@@ -16,7 +16,7 @@ internal class ErmDiagramTest {
     @Test
     fun testPojosDiagram() {
         // add to diagram
-        testee.analyzePackage(pojo_Car::class.java.packageName)
+        testee.analyzePackage(pojo_Car::class.java.`package`.name)
         testee.analyzeClass(pojo_Car::class.java)
 
         // expand container for details
@@ -26,7 +26,7 @@ internal class ErmDiagramTest {
         // render diagram
         val plantuml = testee.toPlantuml()
         println(plantuml)
-        Path.of("target", "ERM Diagram.puml")
+        Paths.get("target", "ERM Diagram.puml")
             .toFile().writer().use {
                 it.write(plantuml)
             }
@@ -40,7 +40,7 @@ internal class ErmDiagramTest {
     @Test
     fun testJpaDiagram() {
         // add to diagram
-        testee.analyzePackage(jpa_Car::class.java.packageName)
+        testee.analyzePackage(jpa_Car::class.java.`package`.name)
         testee.analyzeClass(jpa_Car::class.java)
         testee.addMarkerInterface(Vehicle::class.java)
 
@@ -51,7 +51,7 @@ internal class ErmDiagramTest {
         // render diagram
         val plantuml = testee.toPlantuml()
         println(plantuml)
-        Path.of("target", "JPA Diagram.puml")
+        Paths.get("target", "JPA Diagram.puml")
             .toFile().writer().use {
                 it.write(plantuml)
             }

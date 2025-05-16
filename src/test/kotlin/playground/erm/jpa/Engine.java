@@ -10,5 +10,5 @@ public class Engine {
     private String power;
     @OneToOne
     private Car car;
-
+    public Fuel fuel;
 }

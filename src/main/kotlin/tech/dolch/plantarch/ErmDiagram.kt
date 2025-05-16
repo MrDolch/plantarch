@@ -6,7 +6,6 @@ import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import javassist.Modifier
 import java.lang.IllegalArgumentException
-import java.lang.reflect.ParameterizedType
 import kotlin.reflect.jvm.kotlinProperty
 
 open class ErmDiagram(
@@ -47,20 +46,13 @@ open class ErmDiagram(
         }
         combineRelations()
 
-        // a->b->c && a->c
-        val toRemove = relations.filter { it.type == RelationType.EXTENDS || it.type == RelationType.IMPLEMENTS }
-            .filter {
-                relations.filter { r -> r.source == it.source }
-                    .filter { r -> r.target != it.target }
-                    .any { r -> it.target.isAssignableFrom(r.target) }
-            }.toSet()
-        relations.removeAll(toRemove)
 
         return ("@startuml\n"
                 // classes, enums, interfaces, and abstracts
                 + containers.values.filter { obj: Container -> obj.isVisible() }
             .filter { obj: Container -> obj.isExpanded }
             .flatMap { obj: Container -> obj.classes }
+            .sortedBy { it.name }
             .joinToString("\n") { c: Class<*>? -> renderDeclaration(c!!) }
                 + "\n"
                 // relations
@@ -76,6 +68,7 @@ open class ErmDiagram(
 
     private fun combineRelations() {
         val doubleRelations = relations
+            .sortedBy { it.source!!.name }
             .groupBy { sortedSetOf(it.source!!.name, it.target.name) }
             .filterValues { it.size == 2 }
             .values
@@ -150,6 +143,7 @@ open class ErmDiagram(
         listOf(source)
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .flatMap { obj: JavaClass -> obj.interfaces }
+            .sortedBy { it.name }
             .map { obj: JavaType -> obj.toErasure() }
             .filter { !markerInterfaces.contains(it.reflect()) }
             .filter { t: JavaClass -> getContainer(t).isVisible() }
@@ -166,7 +160,9 @@ open class ErmDiagram(
             .filter { s: JavaClass -> getContainer(s).isVisible() }
             .filter { s: JavaClass -> !s.isInterface }
             .flatMap { obj: JavaClass -> obj.allSubclasses }
+            .sortedBy { it.name }
             .map { obj: JavaClass -> obj.toErasure() }
+            .filter { t: JavaClass -> t.superclass == source } // only direct children
             .filter { t: JavaClass -> getContainer(t).isVisible() }
             .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
@@ -175,15 +171,16 @@ open class ErmDiagram(
         .filter { getContainer(it).isVisible() }
         .filter { s -> isEntity(s) }
         .flatMap { it.fields }
+        .sortedBy { it.name }
         .forEach { jf: JavaField ->
             val t = jf.rawType
             val f = jf.reflect()
             val srcIsNullable = f.kotlinProperty?.returnType?.isMarkedNullable ?: false
             when {
-                MutableCollection::class.java.isAssignableFrom(t.reflect()) -> {
-                    for (ta in (f.genericType as ParameterizedType).actualTypeArguments) {
+                Collection::class.java.isAssignableFrom(t.reflect()) -> {
+                    for (ta in jf.allInvolvedRawTypes.sortedBy { it.fullName }) {
                         try {
-                            val genericType = Class.forName(ta.typeName)
+                            val genericType = ta.reflect()
                             if (getContainer(genericType).isVisible()) {
                                 val toMany =
                                     if (srcIsNullable) RelationType.ZERO_OR_ONE_TO_MANY

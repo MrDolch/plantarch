@@ -2,7 +2,7 @@ package playground.erm.jpa;
 
 import javax.persistence.Column;
 
-public class Person extends Jemand {
+public class Person extends Somebody {
     @Column
     private String name;
 

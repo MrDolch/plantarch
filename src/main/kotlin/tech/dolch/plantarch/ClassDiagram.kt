@@ -23,6 +23,13 @@ open class ClassDiagram(
 
     private val containers: MutableMap<String?, Container> = HashMap()
     private val relations: MutableSet<Relation> = HashSet()
+    var useByMemberHidden = false
+    var useByReturnHidden = false
+    var useByParameterHidden = false
+
+    var useByMemberColor: String? = null
+    var useByReturnTypesColor: String? = null
+    var useByParameterColor: String? = null
 
     open fun <T> analyzeClass(clazz: Class<T>?) = clazzToAnalyze.add(clazz)
 
@@ -52,7 +59,7 @@ open class ClassDiagram(
             forEach { addImplementRelation(it) }
             forEach { addExtendRelation(it) }
             // 2. DDD
-            forEach { addCompositeRelation(it) }
+        //    forEach { addCompositeRelation(it) }
             // 3. Dependencies
             forEach { addUseRelation(it) }
             forEach { addUsedRelation(it) }
@@ -136,6 +143,7 @@ open class ClassDiagram(
                     "%s ${r.arrow} %s : %s",
                     r.actor!!.name, targetContainer.id(), r.label
                 )
+
                 else -> String.format(
                     "%s ${r.arrow} %s",
                     r.source!!.name, targetContainer.id()
@@ -146,23 +154,59 @@ open class ClassDiagram(
                 "%s ${r.arrow} %s : %s",
                 r.actor!!.name, r.target.name, r.label
             )
+
             else -> String.format(
-                "%s ${r.arrow} %s ",
-                r.source!!.name, r.target.name
+                "%s ${r.arrow} %s %s",
+                r.source!!.name, r.target.name, r.color ?: ""
             )
         }
     }
 
-    private fun addUseRelation(source: JavaClass) = listOf(source)
-        .filter { s -> getContainer(s).isVisible() }
-        .flatMap { s -> s.allAccessesFromSelf }
-        .map { a -> a.targetOwner }
+    private fun addUseRelation(source: JavaClass) {
+        val visibleSources = listOf(source).filter { s -> getContainer(s).isVisible() }
+        addUseRelation(
+            source, RelationType.USES, null, visibleSources
+                .flatMap { s -> s.allAccessesFromSelf }
+                .map { a -> a.targetOwner }
+        )
+        if (!useByMemberHidden) addUseRelation(
+            source, RelationType.USES_AS_MEMBER, useByMemberColor, visibleSources
+                .flatMap { s -> s.allMembers }
+                .filter { it.owner == source }
+                .filterIsInstance<JavaField>()
+                .onEach { println(source.name + " " + it) }
+                .map { it.type }
+        )
+        if (!useByParameterHidden) addUseRelation(
+            source, RelationType.USES_AS_PARAMETER, useByParameterColor, visibleSources
+                .flatMap { s -> s.allMethods }
+                .filter { it.owner == source }
+                .flatMap { it.parameterTypes }
+                .filterIsInstance<JavaClass>()
+        )
+        if (!useByReturnHidden) addUseRelation(
+            source, RelationType.USES_AS_RETURN_TYPE, useByReturnTypesColor, visibleSources
+                .flatMap { s -> s.allMethods }
+                .filter { it.owner == source }
+                .map { it.rawReturnType }
+        )
+    }
+
+    private fun addUseRelation(
+        source: JavaClass,
+        relationType: RelationType,
+        color: String?,
+        targets: List<JavaType>
+    ) = targets
+        .flatMap { it.allInvolvedRawTypes }
+        .filter { !it.isPrimitive }
         .distinct()
         .filter { t -> source != t }
+        .filter { t -> !t.isArray || source != t.componentType }
         .filter { t -> !t.isAssignableFrom(source.reflect()) }
         .filter { t -> getContainer(t).isVisible() }
         .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
-        .forEach { t -> addRelation(Relation.of(source, t, RelationType.USES)) }
+        .forEach { t -> addRelation(Relation.of(source, t, relationType, color)) }
 
     private fun addUsedRelation(source: JavaClass) = listOf(source)
         .filter { s: JavaClass -> getContainer(s).isVisible() }
@@ -193,6 +237,7 @@ open class ClassDiagram(
             .filter { s: JavaClass -> !s.isInterface }
             .flatMap { obj: JavaClass -> obj.allSubclasses }
             .map { obj: JavaClass -> obj.toErasure() }
+            .filter { t: JavaClass -> t.superclass == source } // only direct children
             .filter { t: JavaClass -> getContainer(t).isVisible() }
             .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
@@ -242,6 +287,13 @@ open class ClassDiagram(
                     containers.computeIfAbsent(
                         file.replace(
                             ".*/([^/]+)/target/classes/.*".toRegex(),
+                            "$1"
+                        )
+                    ) { Container(it!!) }
+                else if (file.contains("/target/test-classes/"))
+                    containers.computeIfAbsent(
+                        file.replace(
+                            ".*/([^/]+)/target/test-classes/.*".toRegex(),
                             "$1"
                         )
                     ) { Container(it!!) }

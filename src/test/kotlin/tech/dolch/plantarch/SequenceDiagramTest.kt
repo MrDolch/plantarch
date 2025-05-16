@@ -1,7 +1,7 @@
 package tech.dolch.plantarch
 
 import org.junit.jupiter.api.Test
-import java.nio.file.Path
+import java.nio.file.Paths
 
 internal class SequenceDiagramTest {
     @Test
@@ -16,7 +16,7 @@ internal class SequenceDiagramTest {
             .toPlantuml()
         val plantuml = testee.toPlantuml()
         println(plantuml)
-        Path.of("target", "Sequence Diagram.plantuml")
+        Paths.get("target", "SequenceDiagram.plantuml")
             .toFile().writer().use {
                 it.write(plantuml)
             }
