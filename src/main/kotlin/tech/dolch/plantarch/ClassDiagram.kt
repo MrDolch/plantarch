@@ -26,6 +26,7 @@ open class ClassDiagram(
     var useByMemberHidden = false
     var useByReturnHidden = false
     var useByParameterHidden = false
+    var useByMethodNamesHidden = true
 
     var useByMemberColor: String? = null
     var useByReturnTypesColor: String? = null
@@ -39,7 +40,13 @@ open class ClassDiagram(
         .forEach { clazz -> analyzeClass(clazz) }
 
     private fun addRelation(relation: Relation) {
-        if (relation.source != relation.target) relations.add(relation)
+        if (relation.source == relation.target) return;
+        val find = relations.find { r -> r.source == relation.source && r.target == relation.target }
+        if (find == null) relations.add(relation)
+        else if (relation.action != null) {
+            if (find.action == null) find.action = relation.action
+            else find.action += "\\n" + (relation.action!!.substring(1))
+        }
     }
 
     fun <T> addExternalInteraction(p: Actor?, clazz: Class<T>): T {
@@ -67,7 +74,7 @@ open class ClassDiagram(
         return ("@startuml\n"
                 // actors
                 + relations.sortedBy { it.source?.name }
-                    .map { obj: Relation -> obj.actor }
+            .map { obj: Relation -> obj.actor }
             .filter { Objects.nonNull(it) }
             .joinToString("\n") { a -> "() " + a?.name }
                 + "\n"
@@ -91,7 +98,7 @@ open class ClassDiagram(
             .filter { obj: Container -> obj.isExpanded }
             .flatMap { obj: Container -> obj.classes }
             .sortedBy { it.name }
-            .filter { obj: Class<*>? -> obj!!.isInterface ||  Modifier.isAbstract(obj.modifiers) }
+            .filter { obj: Class<*>? -> obj!!.isInterface || Modifier.isAbstract(obj.modifiers) }
             .joinToString("\n") { c ->
                 (if (c!!.isInterface) "interface " else "abstract ") +
                         c.name + if (clazzToAnalyze.contains(c)) "" else " #ccc"
@@ -159,8 +166,8 @@ open class ClassDiagram(
             )
 
             else -> String.format(
-                "%s ${r.arrow} %s %s",
-                r.source!!.name, r.target.name, r.color ?: ""
+                "%s ${r.arrow} %s %s %s",
+                r.source!!.name, r.target.name, r.color ?: "", if(useByMethodNamesHidden) "" else r.action ?: ""
             )
         }
     }
@@ -170,15 +177,16 @@ open class ClassDiagram(
         addUseRelation(
             source, RelationType.USES, null, visibleSources
                 .flatMap { s -> s.allAccessesFromSelf }
-                .map { a -> a.targetOwner }
+                .groupBy { it.targetOwner }
+                .mapValues { (_, group) -> group.map { it.name }.sorted().distinct().joinToString("\\n") }
         )
         if (!useByMemberHidden) addUseRelation(
             source, RelationType.USES_AS_MEMBER, useByMemberColor, visibleSources
                 .flatMap { s -> s.allMembers }
                 .filter { it.owner == source }
                 .filterIsInstance<JavaField>()
-                .onEach { println(source.name + " " + it) }
-                .map { it.type }
+                //       .onEach { println(source.name + " " + it) }
+                .associate { it.type to null }
         )
         if (!useByParameterHidden) addUseRelation(
             source, RelationType.USES_AS_PARAMETER, useByParameterColor, visibleSources
@@ -186,12 +194,13 @@ open class ClassDiagram(
                 .filter { it.owner == source }
                 .flatMap { it.parameterTypes }
                 .filterIsInstance<JavaClass>()
+                .associateWith { null }
         )
         if (!useByReturnHidden) addUseRelation(
             source, RelationType.USES_AS_RETURN_TYPE, useByReturnTypesColor, visibleSources
                 .flatMap { s -> s.allMethods }
                 .filter { it.owner == source }
-                .map { it.rawReturnType }
+                .associate { it.rawReturnType to null }
         )
     }
 
@@ -199,17 +208,21 @@ open class ClassDiagram(
         source: JavaClass,
         relationType: RelationType,
         color: String?,
-        targets: List<JavaType>
-    ) = targets
-        .flatMap { it.allInvolvedRawTypes }
-        .filter { !it.isPrimitive }
-        .distinct()
-        .filter { t -> source != t }
-        .filter { t -> !t.isArray || source != t.componentType }
-        .filter { t -> !t.isAssignableFrom(source.reflect()) }
-        .filter { t -> getContainer(t).isVisible() }
-        .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
-        .forEach { t -> addRelation(Relation.of(source, t, relationType, color)) }
+        targets: Map<JavaType, String?>,
+    ) = targets.forEach { type, action ->
+        type.allInvolvedRawTypes.filter { !it.isPrimitive }
+            .distinct()
+            .filter { t -> source != t }
+            .filter { t -> !t.isArray || source != t.componentType }
+            .filter { t -> !t.isAssignableFrom(source.reflect()) }
+            .filter { t -> getContainer(t).isVisible() }
+//            .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
+            .forEach { t ->
+                addRelation(
+                    Relation.of(source, t, relationType, color, if (action == null) null else ":$action")
+                )
+            }
+    }
 
     private fun addUsedRelation(source: JavaClass) = listOf(source)
         .filter { s: JavaClass -> getContainer(s).isVisible() }

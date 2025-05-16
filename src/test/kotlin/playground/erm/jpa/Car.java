@@ -20,7 +20,8 @@ public class Car implements Vehicle {
         return owner.sex;
     }
 
-    public void setFuel(Fuel fuel) {
-        engine.fuel = fuel;
+    public void setFuel(Fuel fuele) {
+        engine.fuel = fuele;
+        engine.power = "666 PS";
     }
 }

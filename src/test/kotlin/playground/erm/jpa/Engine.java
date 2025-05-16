@@ -7,7 +7,7 @@ import javax.persistence.OneToOne;
 @Entity
 public class Engine {
     @Column
-    private String power;
+    public String power;
     @OneToOne
     private Car car;
     public Fuel fuel;
