@@ -49,7 +49,10 @@ You can find a usage example in the test suite:
 ![Class Diagram of Class SequenceDiagram](docs/SequenceDiagram-Class_Diagram_of_SequenceDiagram.png)
 
 ![Sequence Diagram of Class SequenceDiagram](docs/SequenceDiagram-Sequence_Diagram_of_PlantArch.png)
-![Sequence Diagram of Class SequenceDiagram](docs/SequenceDiagram-Sequence_Diagram_of_PlantArch.png)
+
+![ERM Diagram of Example](docs/JPA%20Diagram-Erm_Diagram_of_PlantArch.png)
+
+![Class Diagram of Example](docs/Test_ClassDiagram-Test_Class_Diagram_of_Car.png)
 
 ## 🤝 Contributing
 
