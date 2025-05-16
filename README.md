@@ -27,7 +27,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.mrdolch</groupId>
     <artifactId>plantarch</artifactId>
-    <version>0.1.1</version>
+    <version>0.1.2</version>
 </dependency>
 ```
 
