@@ -42,15 +42,24 @@ You can find a usage example in the test suite:
 
 ## Examples:
 
+The class diagram shows the dependencies of the ClassDiagram class.
+Source 👉 [ClassDiagramTest.kt](src/test/kotlin/tech/dolch/plantarch/ClassDiagramTest.kt)
+
 ![Class Diagram of Class ClassDiagram](docs/ClassDiagram-Class_Diagram_of_ClassDiagram.png)
 
-![Class Diagram of Class ErmDiagram](docs/ErmDiagram-Class_Diagram_of_ErmDiagram.png)
-
-![Class Diagram of Class SequenceDiagram](docs/SequenceDiagram-Class_Diagram_of_SequenceDiagram.png)
+This diagram shows a sequence diagram that was recorded using a JUnit test.
+Source 👉 [SequenceDiagramTest.kt](src/test/kotlin/tech/dolch/plantarch/SequenceDiagramTest.kt)
 
 ![Sequence Diagram of Class SequenceDiagram](docs/SequenceDiagram-Sequence_Diagram_of_PlantArch.png)
 
+This is a sample ERM diagram showing the relationships between classes and their members.
+Source 👉 [ErmDiagramTest.kt](src/test/kotlin/tech/dolch/plantarch/ErmDiagramTest.kt)
+
 ![ERM Diagram of Example](docs/JPA%20Diagram-Erm_Diagram_of_PlantArch.png)
+
+This is a sample class diagram showing the dependencies between individual classes. The arrows are color-coded based on
+the type of dependency.
+Source 👉 [ClassDiagramTest.kt](src/test/kotlin/tech/dolch/plantarch/ClassDiagramTest.kt)
 
 ![Class Diagram of Example](docs/Test_ClassDiagram-Test_Class_Diagram_of_Car.png)
 
