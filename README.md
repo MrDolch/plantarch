@@ -1,12 +1,14 @@
 # PlantArch
 
+<img src="docs/logo.png" alt="PlantArch Logo" align="left" width="150"/>
+
 [![mvn verify][ci_img]][ci_link]
 [![Maven Central][maven_img]][maven_link]
 
-<img src="docs/logo.png" alt="PlantArch Logo" align="left" width="150"/>
-
 **PlantArch** is a lightweight and easily configurable tool to generate architecture diagrams from Java classes —
 inspired by [PlantUML](https://plantuml.com/) and software architecture principles.
+
+<br clear="all">
 
 ## ✨ Features
 
