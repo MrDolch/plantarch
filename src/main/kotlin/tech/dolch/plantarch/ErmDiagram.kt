@@ -4,8 +4,8 @@ import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import javassist.Modifier
 import java.lang.IllegalArgumentException
+import java.lang.reflect.Modifier
 import kotlin.reflect.jvm.kotlinProperty
 
 open class ErmDiagram(
@@ -191,6 +191,7 @@ open class ErmDiagram(
                         }
                     }
                 }
+
                 getContainer(t).isVisible() -> {
                     val toZeroOrOne =
                         if (srcIsNullable) RelationType.ZERO_OR_ONE_TO_UNKNOWN
@@ -220,14 +221,17 @@ open class ErmDiagram(
                 resource == null -> UNKNOWN
                 "jrt" == protocol ->
                     containers.computeIfAbsent("jrt") { name -> Container(name!!, isHidden = true) }
+
                 file!!.startsWith("file:") ->
                     containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) {
                         Container(it!!, isHidden = true)
                     }
+
                 file.matches(".*/([^/]+)/target/(test-)?classes/.*".toRegex()) ->
                     containers.computeIfAbsent(file.replace(".*/([^/]+)/target/(test-)?classes/.*".toRegex(), "$1")) {
                         Container(it!!, isHidden = true)
                     }
+
                 else -> UNKNOWN
             }
         result.addClass(clazz)

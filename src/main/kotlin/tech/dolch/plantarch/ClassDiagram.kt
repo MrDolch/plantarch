@@ -5,10 +5,10 @@ import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import javassist.Modifier
 import javassist.util.proxy.MethodHandler
 import javassist.util.proxy.ProxyFactory
 import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.util.*
 
@@ -59,14 +59,15 @@ open class ClassDiagram(
             forEach { addImplementRelation(it) }
             forEach { addExtendRelation(it) }
             // 2. DDD
-        //    forEach { addCompositeRelation(it) }
+            //    forEach { addCompositeRelation(it) }
             // 3. Dependencies
             forEach { addUseRelation(it) }
             forEach { addUsedRelation(it) }
         }
         return ("@startuml\n"
                 // actors
-                + relations.map { obj: Relation -> obj.actor }
+                + relations.sortedBy { it.source?.name }
+                    .map { obj: Relation -> obj.actor }
             .filter { Objects.nonNull(it) }
             .joinToString("\n") { a -> "() " + a?.name }
                 + "\n"
@@ -74,6 +75,7 @@ open class ClassDiagram(
                 + containers.values.filter { obj: Container -> obj.isVisible() }
             .filter { obj: Container -> obj.isExpanded }
             .flatMap { obj: Container -> obj.classes }
+            .sortedBy { it.name }
             .filter { aClass: Class<*>? -> !aClass!!.isInterface }
             .filter { c: Class<*>? -> !Modifier.isAbstract(c!!.modifiers) }
             .joinToString("\n") { c: Class<*>? ->
@@ -88,8 +90,8 @@ open class ClassDiagram(
                 + containers.values.filter { obj: Container -> obj.isVisible() }
             .filter { obj: Container -> obj.isExpanded }
             .flatMap { obj: Container -> obj.classes }
-            .filter { obj: Class<*>? -> obj!!.isInterface }
-            .filter { c: Class<*>? -> Modifier.isAbstract(c!!.modifiers) }
+            .sortedBy { it.name }
+            .filter { obj: Class<*>? -> obj!!.isInterface ||  Modifier.isAbstract(obj.modifiers) }
             .joinToString("\n") { c ->
                 (if (c!!.isInterface) "interface " else "abstract ") +
                         c.name + if (clazzToAnalyze.contains(c)) "" else " #ccc"
@@ -99,6 +101,7 @@ open class ClassDiagram(
                 + containers.values.filter { obj: Container -> obj.isVisible() }
             .filter { obj: Container -> obj.isExpanded }
             .flatMap { obj: Container -> obj.classes }
+            .sortedBy { it.name }
             .filter { obj: Class<*>? -> obj!!.isEnum }
             .joinToString("\n") { c -> "enum " + c.name + if (clazzToAnalyze.contains(c)) " #afa" else " #ccc" }
                 + "\n"

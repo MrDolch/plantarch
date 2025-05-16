@@ -12,9 +12,10 @@ class ClassDiagramTest {
         renderDiagram(ClassDiagram::class)
         renderDiagram(ErmDiagram::class)
         renderDiagram(SequenceDiagram::class)
+        renderDiagram(Relation::class, ClassDiagram::class, ErmDiagram::class, SequenceDiagram::class, Actor::class)
     }
 
-    private fun renderDiagram(klass: KClass<out Any>) {
+    private fun renderDiagram(klass: KClass<out Any>, vararg klasses: KClass<out Any>) {
         val testee = ClassDiagram(
             "Class Diagram of ${klass.simpleName}",
             "Shows the dependencies of ${klass.simpleName}"
@@ -22,6 +23,7 @@ class ClassDiagramTest {
         // add to diagram
         //testee.analyzePackage(ClassDiagram::class.java.`package`.name)
         testee.analyzeClass(klass.java)
+        klasses.forEach { testee.analyzeClass(it.java) }
 
         /*
         // actors are not visible on class diagrams
