@@ -5,7 +5,6 @@ enum class RelationType(val defaultArrow: String) {
     USES_AS_MEMBER("..>"),
     USES_AS_PARAMETER("..>"),
     USES_AS_RETURN_TYPE("..>"),
-    USED("<.."),
     AGGREGATES("*-"),
     COMPOSES("\"*\" o- \"1\""),
     IMPLEMENTS(".up.|>"),

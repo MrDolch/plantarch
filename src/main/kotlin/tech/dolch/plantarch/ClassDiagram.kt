@@ -1,6 +1,5 @@
 package tech.dolch.plantarch
 
-import com.tngtech.archunit.core.domain.JavaAccess
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
@@ -11,11 +10,12 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.lang.reflect.ParameterizedType
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 open class ClassDiagram(
     private val name: String = "",
     private val description: String = "",
-    private val clazzToAnalyze: MutableSet<Class<*>?> = HashSet()
+    private val classesToAnalyze: MutableSet<Class<*>> = HashSet()
 ) {
     companion object {
         private val UNKNOWN = Container("unknown", isHidden = true)
@@ -32,7 +32,7 @@ open class ClassDiagram(
     var useByReturnTypesColor: String? = null
     var useByParameterColor: String? = null
 
-    open fun <T> analyzeClass(clazz: Class<T>?) = clazzToAnalyze.add(clazz)
+    open fun <T> analyzeClass(clazz: Class<T>) = classesToAnalyze.add(clazz)
 
     open fun analyzePackage(vararg packages: String) = ClassFileImporter()
         .importPackages(*packages)
@@ -41,7 +41,11 @@ open class ClassDiagram(
 
     private fun addRelation(relation: Relation) {
         if (relation.source == relation.target) return;
-        val find = relations.find { r -> r.source == relation.source && r.target == relation.target }
+        val find =
+            relations.find { r ->
+                r.source == relation.source && r.target == relation.target
+                        && r.type.defaultArrow == relation.type.defaultArrow
+            }
         if (find == null) relations.add(relation)
         else if (relation.action != null) {
             if (find.action == null) find.action = relation.action
@@ -61,7 +65,9 @@ open class ClassDiagram(
     }
 
     open fun toPlantuml(): String {
-        with(ClassFileImporter().importClasses(clazzToAnalyze)) {
+        val importClasspath = ClassFileImporter().importClasspath()
+        val classnamesToAnalyze = classesToAnalyze.map { it.name }
+        with(importClasspath.filter { javaClass -> classnamesToAnalyze.contains(javaClass.fullName) }) {
             // 1. Hierarchy
             forEach { addImplementRelation(it) }
             forEach { addExtendRelation(it) }
@@ -87,7 +93,7 @@ open class ClassDiagram(
             .filter { c: Class<*>? -> !Modifier.isAbstract(c!!.modifiers) }
             .joinToString("\n") { c: Class<*>? ->
                 "class " + c!!.name + when {
-                    !clazzToAnalyze.contains(c) -> " #ccc"
+                    !classesToAnalyze.contains(c) -> " #ccc"
                     c.kotlin.isData -> "<<data>> #afa"
                     else -> ""
                 }
@@ -101,7 +107,7 @@ open class ClassDiagram(
             .filter { obj: Class<*>? -> obj!!.isInterface || Modifier.isAbstract(obj.modifiers) }
             .joinToString("\n") { c ->
                 (if (c!!.isInterface) "interface " else "abstract ") +
-                        c.name + if (clazzToAnalyze.contains(c)) "" else " #ccc"
+                        c.name + if (classesToAnalyze.contains(c)) "" else " #ccc"
             }
                 + "\n"
                 // enum
@@ -110,7 +116,7 @@ open class ClassDiagram(
             .flatMap { obj: Container -> obj.classes }
             .sortedBy { it.name }
             .filter { obj: Class<*>? -> obj!!.isEnum }
-            .joinToString("\n") { c -> "enum " + c.name + if (clazzToAnalyze.contains(c)) " #afa" else " #ccc" }
+            .joinToString("\n") { c -> "enum " + c.name + if (classesToAnalyze.contains(c)) " #afa" else " #ccc" }
                 + "\n"
                 // libraries
                 + containers.values.asSequence()
@@ -167,13 +173,13 @@ open class ClassDiagram(
 
             else -> String.format(
                 "%s ${r.arrow} %s %s %s",
-                r.source!!.name, r.target.name, r.color ?: "", if(useByMethodNamesHidden) "" else r.action ?: ""
+                r.source!!.name, r.target.name, r.color ?: "", if (useByMethodNamesHidden) "" else r.action ?: ""
             )
         }
     }
 
     private fun addUseRelation(source: JavaClass) {
-        val visibleSources = listOf(source).filter { s -> getContainer(s).isVisible() }
+        val visibleSources = listOf(source).filter { s -> isContainerVisible(s) }
         addUseRelation(
             source, RelationType.USES, null, visibleSources
                 .flatMap { s -> s.allAccessesFromSelf }
@@ -215,7 +221,7 @@ open class ClassDiagram(
             .filter { t -> source != t }
             .filter { t -> !t.isArray || source != t.componentType }
             .filter { t -> !t.isAssignableFrom(source.reflect()) }
-            .filter { t -> getContainer(t).isVisible() }
+            .filter { t -> isContainerVisible(t) }
 //            .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
             .forEach { t ->
                 addRelation(
@@ -224,42 +230,51 @@ open class ClassDiagram(
             }
     }
 
+    private fun ClassDiagram.isContainerVisible(t: JavaClass) = getContainer(t)?.isVisible() ?: false
+
     private fun addUsedRelation(source: JavaClass) = listOf(source)
-        .filter { s: JavaClass -> getContainer(s).isVisible() }
-        .flatMap { obj: JavaClass -> obj.accessesToSelf }
-        .map { obj: JavaAccess<*> -> obj.targetOwner }
+        .filter { s: JavaClass -> isContainerVisible(s) }
+        .flatMap { obj: JavaClass ->
+            (obj.accessesToSelf.map { it.originOwner } +
+                    obj.codeUnitCallsToSelf.map { it.originOwner } +
+                    obj.codeUnitReferencesToSelf.map { it.originOwner } +
+                    obj.constructorReferencesToSelf.map { it.originOwner } +
+                    obj.directDependenciesToSelf.map { it.originClass } +
+                    obj.methodReferencesToSelf.map { it.originOwner }).distinct()
+        }.distinct()
+        .filter { t: JavaClass -> t != source }
         .filter { t: JavaClass -> !source.isAssignableFrom(t.reflect()) }
-        .filter { t: JavaClass -> getContainer(t).isVisible() }
-        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.USED)) }
+        .filter { t: JavaClass -> isContainerVisible(t) }
+        .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.USES)) }
 
     private fun addImplementRelation(source: JavaClass) = listOf(source)
-        .filter { s: JavaClass -> getContainer(s).isVisible() }
+        .filter { s: JavaClass -> isContainerVisible(s) }
         .flatMap { obj: JavaClass -> obj.interfaces }
         .map { obj: JavaType -> obj.toErasure() }
-        .filter { t: JavaClass -> getContainer(t).isVisible() }
+        .filter { t: JavaClass -> isContainerVisible(t) }
         .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
 
     private fun addExtendRelation(source: JavaClass) {
         listOf(source)
-            .filter { s: JavaClass -> getContainer(s).isVisible() }
+            .filter { s: JavaClass -> isContainerVisible(s) }
             .map { obj: JavaClass -> obj.superclass }
             .filter { it.isPresent }
             .map { it.get() }
             .filterIsInstance<JavaClass>()
-            .filter { t -> getContainer(t).isVisible() }
+            .filter { t -> isContainerVisible(t) }
             .forEach { t -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
         listOf(source)
-            .filter { s: JavaClass -> getContainer(s).isVisible() }
+            .filter { s: JavaClass -> isContainerVisible(s) }
             .filter { s: JavaClass -> !s.isInterface }
             .flatMap { obj: JavaClass -> obj.allSubclasses }
             .map { obj: JavaClass -> obj.toErasure() }
-            .filter { t: JavaClass -> t.superclass == source } // only direct children
-            .filter { t: JavaClass -> getContainer(t).isVisible() }
+            .filter { t: JavaClass -> t.superclass.getOrNull() == source } // only direct children
+            .filter { t: JavaClass -> isContainerVisible(t) }
             .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
 
     private fun addCompositeRelation(source: JavaClass) = listOf(source)
-        .filter { getContainer(it).isVisible() }
+        .filter { isContainerVisible(it) }
         .filter { s -> s.reflect().kotlin.isData }
         .flatMap { it.allFields }
         .forEach { f: JavaField ->
@@ -275,14 +290,24 @@ open class ClassDiagram(
                 } catch (ignore: ClassNotFoundException) {
 //                    ignore.printStackTrace()
                 }
-            } else if (getContainer(t).isVisible())
+            } else if (isContainerVisible(t))
                 addRelation(Relation.of(source, t, RelationType.COMPOSES))
         }
 
-    private fun getContainer(clazz: JavaClass): Container = getContainer(clazz.reflect())
+    private fun getContainer(clazz: JavaClass): Container? {
+        try {
+            val reflect = clazz.reflect()
+            return getContainer(reflect)
+        } catch (e: IllegalAccessError) {
+            return null;
+        }
+    }
+
     private fun getContainer(user: Actor?): Container =
         if (user == null) UNKNOWN
         else containers.computeIfAbsent(user.name) { name -> Container(name!!) }
+
+    fun getContainer(name: String): Container = containers.computeIfAbsent(name) { key -> Container(key!!) }
 
     fun getContainer(clazz: Class<*>?): Container {
         val result: Container = if (clazz != null
