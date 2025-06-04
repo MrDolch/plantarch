@@ -16,16 +16,13 @@ fun main() {
         }
 
         val arguments = Json.decodeFromString<RenderJob>(eingabe)
-        val plantumls = renderDiagrams(arguments)
-        println(plantumls)
+        val plantuml = renderDiagram(arguments)
+        println(plantuml)
     }
 }
 
-/*
- {"classDiagrams":[{"title":"Class Diagram","description":"Description","classesToAnalyze":["tech.dolch.plantarch.ClassDiagram"],"containersToHide":["kotlin.Pair","java.lang.String"],"containersToExpand":["tech.dolch.plantarch.ClassDiagram"]}]}
- */
-private fun renderDiagrams(parameters: RenderJob) =
-    parameters.classDiagrams.joinToString(separator = "\n\n") { classDiagramParams ->
+private fun renderDiagram(parameters: RenderJob) =
+    parameters.classDiagrams.let { classDiagramParams ->
         val classLoader = ClassLoader.getSystemClassLoader()
         val classesToAnalyze =
             classDiagramParams.classesToAnalyze
@@ -33,7 +30,7 @@ private fun renderDiagrams(parameters: RenderJob) =
                 .toMutableSet()
         val classDiagram = ClassDiagram(classDiagramParams.title, classDiagramParams.description, classesToAnalyze)
         classDiagramParams.containersToHide
-            .forEach { classDiagram.getContainer(it)?.isHidden = true }
+            .forEach { classDiagram.getContainer(it).isHidden = true }
         classDiagramParams.classesToAnalyze
             .map { classname -> classLoader.loadClass(classname) }
             .forEach { classDiagram.getContainer(it).isExpanded = true }
@@ -48,14 +45,23 @@ private fun renderDiagrams(parameters: RenderJob) =
 
 
 @Serializable
-data class RenderJob(val classDiagrams: List<ClassDiagramParams>) {
+data class IdeaRenderJob(
+    val projectName: String,
+    val moduleName: String,
+    val classPaths: Set<String>,
+    val renderJob: RenderJob,
+    val targetPumlFile: String
+)
+
+@Serializable
+data class RenderJob(val classDiagrams: ClassDiagramParams) {
     @Serializable
     data class ClassDiagramParams(
-        val title: String = "",
-        val description: String = "",
-        val classesToAnalyze: List<String> = emptyList(),
-        val containersToHide: List<String> = emptyList(),
-        val classesToHide: List<String> = emptyList(),
-        val showUseByMethodNames: Boolean = false,
+        var title: String = "",
+        var description: String = "",
+        var classesToAnalyze: List<String> = emptyList(),
+        var containersToHide: List<String> = emptyList(),
+        var classesToHide: List<String> = emptyList(),
+        var showUseByMethodNames: Boolean = false,
     )
 }
