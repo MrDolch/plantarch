@@ -1,6 +1,7 @@
 package tech.dolch.plantarch
 
 import com.tngtech.archunit.core.domain.JavaClass
+import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.domain.JavaField
 import com.tngtech.archunit.core.domain.JavaType
 import com.tngtech.archunit.core.importer.ClassFileImporter
@@ -8,7 +9,6 @@ import javassist.util.proxy.MethodHandler
 import javassist.util.proxy.ProxyFactory
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
-import java.lang.reflect.ParameterizedType
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -40,7 +40,7 @@ open class ClassDiagram(
         .forEach { clazz -> analyzeClass(clazz) }
 
     private fun addRelation(relation: Relation) {
-        if (relation.source == relation.target) return;
+        if (relation.source == relation.target) return
         val find =
             relations.find { r ->
                 r.source == relation.source && r.target == relation.target
@@ -64,8 +64,10 @@ open class ClassDiagram(
         return factory.create(arrayOfNulls(0), arrayOfNulls(0), handler) as T
     }
 
-    open fun toPlantuml(): String {
-        val importClasspath = ClassFileImporter().importClasspath()
+    open fun toPlantuml(): String =
+        toPlantuml(ClassFileImporter().importClasspath())
+
+    open fun toPlantuml(importClasspath: JavaClasses): String {
         val classnamesToAnalyze = classesToAnalyze.map { it.name }
         with(importClasspath.filter { javaClass -> classnamesToAnalyze.contains(javaClass.fullName) }) {
             // 1. Hierarchy
@@ -106,7 +108,7 @@ open class ClassDiagram(
             .sortedBy { it.name }
             .filter { obj: Class<*>? -> obj!!.isInterface || Modifier.isAbstract(obj.modifiers) }
             .joinToString("\n") { c ->
-                (if (c!!.isInterface) "interface " else "abstract ") +
+                (if (c.isInterface) "interface " else "abstract ") +
                         c.name + if (classesToAnalyze.contains(c)) "" else " #ccc"
             }
                 + "\n"
@@ -273,33 +275,12 @@ open class ClassDiagram(
             .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
     }
 
-    private fun addCompositeRelation(source: JavaClass) = listOf(source)
-        .filter { isContainerVisible(it) }
-        .filter { s -> s.reflect().kotlin.isData }
-        .flatMap { it.allFields }
-        .forEach { f: JavaField ->
-            val t = f.rawType
-            if (MutableCollection::class.java.isAssignableFrom(t.reflect())) {
-                val genericType = f.reflect().genericType
-                try {
-                    for (ta in (genericType as ParameterizedType).actualTypeArguments) {
-                        val c = Class.forName(ta.typeName)
-                        if (getContainer(c).isVisible())
-                            addRelation(Relation.of(source.reflect(), c, RelationType.AGGREGATES))
-                    }
-                } catch (ignore: ClassNotFoundException) {
-//                    ignore.printStackTrace()
-                }
-            } else if (isContainerVisible(t))
-                addRelation(Relation.of(source, t, RelationType.COMPOSES))
-        }
-
     private fun getContainer(clazz: JavaClass): Container? {
         try {
             val reflect = clazz.reflect()
             return getContainer(reflect)
         } catch (e: IllegalAccessError) {
-            return null;
+            return null
         }
     }
 

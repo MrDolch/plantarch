@@ -1,5 +1,6 @@
 package tech.dolch.plantarch.cmd
 
+import com.tngtech.archunit.core.importer.ClassFileImporter
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import tech.dolch.plantarch.ClassDiagram
@@ -38,7 +39,8 @@ private fun renderDiagram(parameters: RenderJob) =
         classDiagram.useByReturnHidden = false
         classDiagram.useByParameterHidden = false
         classDiagram.useByMethodNamesHidden = !classDiagramParams.showUseByMethodNames
-        classDiagram.toPlantuml().lines()
+        val packages = classesToAnalyze.map { it.`package`.name }.distinct()
+        classDiagram.toPlantuml(ClassFileImporter().importPackages(packages)).lines()
             .filter { line -> !classDiagramParams.classesToHide.any { classToHide -> line.contains(classToHide) } }
             .joinToString("\n")
     }
