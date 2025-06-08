@@ -4,6 +4,8 @@ import com.tngtech.archunit.core.importer.ClassFileImporter
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import tech.dolch.plantarch.ClassDiagram
+import java.io.File
+import java.nio.file.Path
 
 
 fun main() {
@@ -39,12 +41,17 @@ private fun renderDiagram(parameters: RenderJob) =
         classDiagram.useByReturnHidden = false
         classDiagram.useByParameterHidden = false
         classDiagram.useByMethodNamesHidden = !classDiagramParams.showUseByMethodNames
-        val packages = classesToAnalyze.map { it.`package`.name }.distinct()
-        classDiagram.toPlantuml(ClassFileImporter().importPackages(packages)).lines()
+        val importClasspath = ClassFileImporter().importPaths(findLocalClasspathDirs())
+        classDiagram.toPlantuml(importClasspath).lines()
             .filter { line -> !classDiagramParams.classesToHide.any { classToHide -> line.contains(classToHide) } }
             .joinToString("\n")
     }
 
+fun findLocalClasspathDirs(): List<Path> = System.getProperty("java.class.path")
+    .split(File.pathSeparator)
+    .map { File(it) }
+    .filter { it.exists() && it.isDirectory }
+    .map { it.toPath() }
 
 @Serializable
 data class IdeaRenderJob(
@@ -52,7 +59,20 @@ data class IdeaRenderJob(
     val moduleName: String,
     val classPaths: Set<String>,
     val renderJob: RenderJob,
-    val targetPumlFile: String
+    val optionPanelState: OptionPanelState,
+)
+
+@Serializable
+data class OptionPanelState(
+    val targetPumlFile: String,
+    var showPackages: Boolean,
+    var flatPackages: Boolean,
+    var classesInFocus: List<String>,
+    var classesInFocusSelected: List<String>,
+    var hiddenContainers: List<String>,
+    var hiddenContainersSelected: List<String>,
+    var hiddenClasses: List<String>,
+    var hiddenClassesSelected: List<String>,
 )
 
 @Serializable

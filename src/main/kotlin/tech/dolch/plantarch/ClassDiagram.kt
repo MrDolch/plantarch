@@ -307,17 +307,11 @@ open class ClassDiagram(
                     containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) { Container(it!!) }
                 else if (file.contains("/target/classes/"))
                     containers.computeIfAbsent(
-                        file.replace(
-                            ".*/([^/]+)/target/classes/.*".toRegex(),
-                            "$1"
-                        )
+                        file.replace(".*/([^/]+)/target/classes/.*".toRegex(), "$1")
                     ) { Container(it!!) }
                 else if (file.contains("/target/test-classes/"))
                     containers.computeIfAbsent(
-                        file.replace(
-                            ".*/([^/]+)/target/test-classes/.*".toRegex(),
-                            "$1"
-                        )
+                        file.replace(".*/([^/]+)/target/test-classes/.*".toRegex(), "$1")
                     ) { Container(it!!) }
                 else UNKNOWN
             } else UNKNOWN
