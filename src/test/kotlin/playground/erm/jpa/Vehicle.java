@@ -1,4 +1,4 @@
 package playground.erm.jpa;
 
-public interface Vehicle {
+public interface Vehicle extends Thing{
 }

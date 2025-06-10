@@ -8,7 +8,9 @@ enum class RelationType(val defaultArrow: String) {
     AGGREGATES("*-"),
     COMPOSES("\"*\" o- \"1\""),
     IMPLEMENTS(".up.|>"),
+    IMPLEMENTED_BY("<|.."),
     EXTENDS("-up-|>"),
+    EXTENDED_BY("<|--"),
     USER_INTERACTS(".right.>"),
 
     // ERM

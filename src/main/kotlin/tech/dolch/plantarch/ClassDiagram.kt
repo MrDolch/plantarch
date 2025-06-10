@@ -249,12 +249,21 @@ open class ClassDiagram(
         .filter { t: JavaClass -> isContainerVisible(t) }
         .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.USES)) }
 
-    private fun addImplementRelation(source: JavaClass) = listOf(source)
-        .filter { s: JavaClass -> isContainerVisible(s) }
-        .flatMap { obj: JavaClass -> obj.interfaces }
-        .map { obj: JavaType -> obj.toErasure() }
-        .filter { t: JavaClass -> isContainerVisible(t) }
-        .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
+    private fun addImplementRelation(source: JavaClass) {
+        listOf(source)
+            .filter { s: JavaClass -> isContainerVisible(s) }
+            .flatMap { obj: JavaClass -> obj.interfaces }
+            .map { obj: JavaType -> obj.toErasure() }
+            .filter { t: JavaClass -> isContainerVisible(t) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
+        listOf(source)
+            .filter { s: JavaClass -> s.isInterface }
+            .filter { s: JavaClass -> isContainerVisible(s) }
+            .flatMap { obj: JavaClass -> obj.subclasses }
+            .map { obj: JavaType -> obj.toErasure() }
+            .filter { t: JavaClass -> isContainerVisible(t) }
+            .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.IMPLEMENTS)) }
+    }
 
     private fun addExtendRelation(source: JavaClass) {
         listOf(source)
