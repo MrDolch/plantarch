@@ -348,9 +348,9 @@ open class ClassDiagram(
         val file = resource.file
         if ("jrt" == protocol)
           containers.computeIfAbsent("jrt") { name -> Container(name!!) }
-        else if (file.startsWith("file:") || file.startsWith("jar:"))
+        else if (protocol== "jar" || file.startsWith("file:") || file.startsWith("jar:"))
           containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) { Container(it!!) }
-        else if (file.startsWith(workingDir.toString()))
+        else if (Paths.get(resource.toURI()).startsWith(workingDir))
           containers.computeIfAbsent(workingDir.name) { Container(it!!) }
         else UNKNOWN
       } else UNKNOWN
