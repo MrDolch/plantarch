@@ -25,6 +25,6 @@ class MainTest {
         it.write(plantuml)
       }
 
-    assertContains(plantuml, "class tech.dolch.plantarch.Actor #ccc {\n--\n    getName\n}")
+    assertContains(plantuml.replace("\r", ""), "class tech.dolch.plantarch.Actor #ccc {\n--\n    getName\n}")
   }
 }
