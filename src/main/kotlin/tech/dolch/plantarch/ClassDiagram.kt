@@ -30,7 +30,11 @@ open class ClassDiagram(
   var useByMemberHidden = false
   var useByReturnHidden = false
   var useByParameterHidden = false
-  var useByMethodNamesHidden = true
+  var useByMethodNames = UseByMethodNames.ARROW
+
+  enum class UseByMethodNames {
+    NONE, DEFINITION, ARROW
+  }
 
   var useByMemberColor: String? = null
   var useByReturnTypesColor: String? = null
@@ -53,7 +57,7 @@ open class ClassDiagram(
     if (find == null) relations.add(relation)
     else if (relation.action != null) {
       if (find.action == null) find.action = relation.action
-      else find.action += "\\n" + (relation.action!!.substring(1))
+      else find.action += "\\n" + relation.action
     }
   }
 
@@ -90,40 +94,12 @@ open class ClassDiagram(
       .filter { Objects.nonNull(it) }
       .joinToString("\n") { a -> "() " + a?.name }
         + "\n"
-        // classes
-        + containers.values.filter { obj: Container -> obj.isVisible() }
-      .filter { obj: Container -> obj.isExpanded }
-      .flatMap { obj: Container -> obj.classes }
-      .sortedBy { it.name }
-      .filter { aClass: Class<*>? -> !aClass!!.isInterface }
-      .filter { c: Class<*>? -> !Modifier.isAbstract(c!!.modifiers) }
-      .joinToString("\n") { c: Class<*>? ->
-        "class " + c!!.name + when {
-          !classesToAnalyze.contains(c) -> " #ccc"
-          c.kotlin.isData -> "<<data>> #afa"
-          else -> ""
-        }
-      }
+        + toPlantUmlClassesDefinitions()
         + "\n"
-        // interfaces
-        + containers.values.filter { obj: Container -> obj.isVisible() }
-      .filter { obj: Container -> obj.isExpanded }
-      .flatMap { obj: Container -> obj.classes }
-      .sortedBy { it.name }
-      .filter { obj: Class<*>? -> obj!!.isInterface || Modifier.isAbstract(obj.modifiers) }
-      .joinToString("\n") { c ->
-        (if (c.isInterface) "interface " else "abstract ") +
-            c.name + if (classesToAnalyze.contains(c)) "" else " #ccc"
-      }
+        + toPlantUmlInterfaceDefinitions()
         + "\n"
-        // enum
-        + containers.values.filter { obj: Container -> obj.isVisible() }
-      .filter { obj: Container -> obj.isExpanded }
-      .flatMap { obj: Container -> obj.classes }
-      .sortedBy { it.name }
-      .filter { obj: Class<*>? -> obj!!.isEnum }
-      .joinToString("\n") { c -> "enum " + c.name + if (classesToAnalyze.contains(c)) " #afa" else " #ccc" }
-        + "\n"
+        + toPlantUmlEnumDefinitions()
+        + "\n\n"
         // libraries
         + containers.values.asSequence()
       .filter { obj: Container -> obj.isVisible() }
@@ -137,16 +113,63 @@ open class ClassDiagram(
       .sorted()
       .distinct()
       .joinToString("\n")
-        + "\ntitle\n$name\nendtitle"
-        + "\ncaption\n$description\nendcaption"
-        + "\nskinparam linetype polyline\n@enduml")
+        + "\n\ntitle\n$name\nendtitle"
+        + "\n\ncaption\n$description\nendcaption"
+        + "\n\nskinparam linetype polyline\n\n@enduml")
+  }
+
+  private fun toPlantUmlInterfaceDefinitions(): String = containers.values.filter { obj: Container -> obj.isVisible() }
+    .filter { obj: Container -> obj.isExpanded }
+    .flatMap { obj: Container -> obj.classes }
+    .sortedBy { it.name }
+    .filter { obj: Class<*>? -> obj!!.isInterface || Modifier.isAbstract(obj.modifiers) }
+    .joinToString("\n") { c ->
+      (if (c.isInterface) "interface " else "abstract ") +
+          c.name + if (classesToAnalyze.contains(c)) "" else " #ccc" + constantsAndMethods(c)
+    }
+
+  private fun toPlantUmlEnumDefinitions(): String = containers.values.filter { obj: Container -> obj.isVisible() }
+    .filter { obj: Container -> obj.isExpanded }
+    .flatMap { obj: Container -> obj.classes }
+    .sortedBy { it.name }
+    .filter { obj: Class<*>? -> obj!!.isEnum }
+    .joinToString("\n") { c ->
+      "enum " + c.name + if (classesToAnalyze.contains(c)) " #afa" else " #ccc" + constantsAndMethods(c)
+    }
+
+  private fun toPlantUmlClassesDefinitions(): String {
+    return containers.values.filter { obj: Container -> obj.isVisible() }
+      .filter { obj: Container -> obj.isExpanded }
+      .flatMap { obj: Container -> obj.classes }
+      .sortedBy { it.name }
+      .filter { aClass: Class<*>? -> !aClass!!.isInterface }
+      .filter { aClass: Class<*>? -> !aClass!!.isEnum }
+      .filter { c: Class<*>? -> !Modifier.isAbstract(c!!.modifiers) }
+      .joinToString("\n") { c: Class<*> ->
+        "class " + c.name + when {
+          !classesToAnalyze.contains(c) -> " #ccc"
+          c.kotlin.isData -> "<<data>> #afa"
+          else -> ""
+        } + constantsAndMethods(c)
+      }
+  }
+
+  private fun constantsAndMethods(c: Class<*>): String {
+    if (useByMethodNames != UseByMethodNames.DEFINITION) return ""
+    val methodsAndConstants = relations.filter { it.target == c }
+      .filter { it.action != null }
+      .flatMap { it.action!!.split("\\\\n".toRegex()) }
+      .sorted().distinct()
+    val constants = methodsAndConstants.filter { it[0].isUpperCase() }.joinToString("") { "\n    $it" }
+    val methods = methodsAndConstants.filter { it[0].isLowerCase() }.joinToString("") { "\n    $it" }
+    return " {$constants\n--$methods\n}\n"
   }
 
   private fun toPlantuml(container: Container): String = String
     .format(
       "object \"%s\" as %d #ccc{\n%s\n}\n",
       container.name, container.id(), container.classes
-        .map { it.name }
+        .map { "    " + it.name }
         .sorted()
         .joinToString("\n")
     )
@@ -179,17 +202,20 @@ open class ClassDiagram(
 
       else -> String.format(
         "%s ${r.arrow} %s %s %s",
-        r.source!!.name, r.target.name, r.color ?: "", if (useByMethodNamesHidden) "" else r.action ?: ""
+        r.source!!.name, r.target.name, r.color ?: "",
+        if (useByMethodNames != UseByMethodNames.ARROW || r.action.isNullOrBlank()) ""
+        else r.action!!.split("\\\\n".toRegex()).sorted().joinToString("\\n", ":")
       )
     }
   }
 
-  private fun addUseRelation(source: JavaClass) {
+  private fun addUseRelation(source: JavaClass, targetFilter: (JavaType) -> Boolean = { true }) {
     val visibleSources = listOf(source).filter { s -> isContainerVisible(s) }
     addUseRelation(
       source, RelationType.USES, null, visibleSources
         .flatMap { s -> s.allAccessesFromSelf }
         .groupBy { it.targetOwner }
+        .filter { targetFilter.invoke(it.key) }
         .mapValues { (_, group) -> group.map { it.name }.sorted().distinct().joinToString("\\n") }
     )
     if (!useByMemberHidden) addUseRelation(
@@ -198,6 +224,7 @@ open class ClassDiagram(
         .filter { it.owner == source }
         .filterIsInstance<JavaField>()
         //       .onEach { println(source.name + " " + it) }
+        .filter { targetFilter.invoke(it.type) }
         .associate { it.type to null }
     )
     if (!useByParameterHidden) addUseRelation(
@@ -206,12 +233,14 @@ open class ClassDiagram(
         .filter { it.owner == source }
         .flatMap { it.parameterTypes }
         .filterIsInstance<JavaClass>()
+        .filter { targetFilter.invoke(it) }
         .associateWith { null }
     )
     if (!useByReturnHidden) addUseRelation(
       source, RelationType.USES_AS_RETURN_TYPE, useByReturnTypesColor, visibleSources
         .flatMap { s -> s.allMethods }
         .filter { it.owner == source }
+        .filter { targetFilter.invoke(it.rawReturnType) }
         .associate { it.rawReturnType to null }
     )
   }
@@ -231,7 +260,7 @@ open class ClassDiagram(
 //            .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
       .forEach { t ->
         addRelation(
-          Relation.of(source, t, relationType, color, if (action == null) null else ":$action")
+          Relation.of(source, t, relationType, color, action)
         )
       }
   }
@@ -251,7 +280,10 @@ open class ClassDiagram(
     .filter { t: JavaClass -> t != source }
     .filter { t: JavaClass -> !source.isAssignableFrom(t.reflect()) }
     .filter { t: JavaClass -> isContainerVisible(t) }
-    .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.USES)) }
+    .forEach { t: JavaClass ->
+      addRelation(Relation.of(t, source, RelationType.USES))
+      if (!classesToAnalyze.contains(t.reflect())) addUseRelation(t) { it == source }
+    }
 
   private fun addImplementRelation(source: JavaClass) {
     listOf(source)
@@ -292,7 +324,7 @@ open class ClassDiagram(
     try {
       val reflect = clazz.reflect()
       return getContainer(reflect)
-    } catch (e: IllegalAccessError) {
+    } catch (_: IllegalAccessError) {
       return null
     }
   }
@@ -316,7 +348,7 @@ open class ClassDiagram(
         val file = resource.file
         if ("jrt" == protocol)
           containers.computeIfAbsent("jrt") { name -> Container(name!!) }
-        else if (file.startsWith("file:"))
+        else if (file.startsWith("file:") || file.startsWith("jar:"))
           containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) { Container(it!!) }
         else if (file.startsWith(workingDir.toString()))
           containers.computeIfAbsent(workingDir.name) { Container(it!!) }

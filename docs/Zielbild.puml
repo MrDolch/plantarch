@@ -1,0 +1,87 @@
+@startuml
+
+set namespaceSeparator ::
+package tech.dolch.plantarch{
+    class tech.dolch.plantarch::Actor #ccc {
+        --
+        getName
+    }
+    class tech.dolch.plantarch::ClassDiagram <<builder>> {
+        Companion
+        --
+        +Container getContainer()
+        +void addExternalInteraction(Actor actor)
+        +String toPlantuml()
+    }
+
+    class tech.dolch.plantarch::Container #ccc {
+        --
+        <init>
+        addClass
+        getClasses
+        getName
+        id
+        isClosed
+        isExpanded
+        isHidden
+        isVisible
+    }
+    class tech.dolch.plantarch::Relation #ccc {
+        Companion
+        --
+        getAction
+        getActor
+        getArrow
+        getColor
+        getLabel
+        getSource
+        getTarget
+        getType
+        setAction
+    }
+    enum tech.dolch.plantarch::RelationType #ccc {
+        EXTENDS
+        IMPLEMENTS
+        USES
+        USES_AS_MEMBER
+        USES_AS_PARAMETER
+        USES_AS_RETURN_TYPE
+        --
+        getDefaultArrow
+        ordinal
+    }
+    note right of ClassDiagram
+      Verwaltet Architektur-Klassen
+      und deren Relationen
+    end note
+}
+package tech.dolch.plantarch.cmd{
+    class tech.dolch.plantarch.cmd::MainKt #ccc
+}
+
+tech.dolch.plantarch::ClassDiagram ..> tech.dolch.plantarch::Actor
+tech.dolch.plantarch::ClassDiagram ..> tech.dolch.plantarch::Container
+tech.dolch.plantarch::ClassDiagram ..> tech.dolch.plantarch::Relation
+tech.dolch.plantarch::ClassDiagram ..> tech.dolch.plantarch::RelationType
+tech.dolch.plantarch.cmd::MainKt ..> tech.dolch.plantarch::ClassDiagram :toPlantuml
+
+title
+Dependencies of ClassDiagram
+endtitle
+caption
+Die Abhängigkeiten der Klasse
+endcaption
+skinparam linetype polyline
+
+
+legend bottom
+|= Klasse |= Beschreibung |
+| ClassDiagram | Verwaltet und analysiert Architekturklassen und ihre Relationen |
+| Actor | Repräsentiert einen Benutzer oder externen Teilnehmer |
+| Container | Gruppiert Klassen zu logischen Einheiten (Module, Komponenten) |
+| Relation | Repräsentiert eine Verbindung mit semantischer Bedeutung |
+| RelationType | Enum zur Typisierung von Relationen (USES, EXTENDS usw.) |
+| MainKt | Einstiegspunkt zur Ausführung (z. B. CLI) |
+endlegend
+
+@enduml

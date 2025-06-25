@@ -25,7 +25,7 @@ fun main() {
   }
 }
 
-private fun renderDiagram(parameters: RenderJob) =
+fun renderDiagram(parameters: RenderJob) =
   parameters.classDiagrams.let { classDiagramParams ->
     val classLoader = ClassLoader.getSystemClassLoader()
     val classesToAnalyze =
@@ -46,7 +46,7 @@ private fun renderDiagram(parameters: RenderJob) =
       useByMemberHidden = false
       useByReturnHidden = false
       useByParameterHidden = false
-      useByMethodNamesHidden = !classDiagramParams.showUseByMethodNames
+      useByMethodNames = classDiagramParams.showUseByMethodNames
     }
     val importClasspath = ClassFileImporter().importPaths(findLocalClasspathDirs())
     classDiagram.toPlantuml(importClasspath).lines()
@@ -91,7 +91,7 @@ data class RenderJob(val classDiagrams: ClassDiagramParams) {
     var classesToAnalyze: List<String> = emptyList(),
     var containersToHide: List<String> = emptyList(),
     var classesToHide: List<String> = emptyList(),
-    var showUseByMethodNames: Boolean = false,
+    var showUseByMethodNames: ClassDiagram.UseByMethodNames = ClassDiagram.UseByMethodNames.NONE,
     var workingDir: String,
   )
 }

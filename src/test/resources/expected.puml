@@ -1,0 +1,141 @@
+@startuml
+
+class tech.dolch.plantarch.Actor #ccc {
+--
+    getName
+}
+
+class tech.dolch.plantarch.ClassDiagram {
+--
+    analyzeClass
+    analyzePackage
+    getContainer
+    setUseByMemberColor
+    setUseByMemberHidden
+    setUseByMethodNames
+    setUseByParameterColor
+    setUseByParameterHidden
+    setUseByReturnHidden
+    setUseByReturnTypesColor
+    toPlantuml
+}
+
+class tech.dolch.plantarch.ClassDiagramTest #ccc {
+--
+}
+
+class tech.dolch.plantarch.Container #ccc {
+--
+    addClass
+    getClasses
+    getName
+    id
+    isClosed
+    isExpanded
+    isHidden
+    isVisible
+}
+
+class tech.dolch.plantarch.Relation #ccc {
+    Companion
+--
+    getAction
+    getActor
+    getArrow
+    getColor
+    getLabel
+    getSource
+    getTarget
+    getType
+    setAction
+}
+
+class tech.dolch.plantarch.SequenceDiagramTest #ccc {
+--
+}
+
+class tech.dolch.plantarch.cmd.MainKt #ccc {
+--
+}
+
+class tech.dolch.plantarch.cmd.MainTest #ccc {
+--
+}
+
+
+enum tech.dolch.plantarch.RelationType #ccc {
+    EXTENDS
+    IMPLEMENTS
+    USES
+    USES_AS_MEMBER
+    USES_AS_PARAMETER
+    USES_AS_RETURN_TYPE
+--
+    getDefaultArrow
+    ordinal
+}
+
+
+object "archunit-1.4.1.jar" as 1962234284 #ccc{
+    com.tngtech.archunit.core.domain.AccessTarget
+    com.tngtech.archunit.core.domain.Dependency
+    com.tngtech.archunit.core.domain.JavaAccess
+    com.tngtech.archunit.core.domain.JavaCall
+    com.tngtech.archunit.core.domain.JavaClass
+    com.tngtech.archunit.core.domain.JavaClasses
+    com.tngtech.archunit.core.domain.JavaCodeUnitReference
+    com.tngtech.archunit.core.domain.JavaConstructorReference
+    com.tngtech.archunit.core.domain.JavaField
+    com.tngtech.archunit.core.domain.JavaMember
+    com.tngtech.archunit.core.domain.JavaMethod
+    com.tngtech.archunit.core.domain.JavaMethodReference
+    com.tngtech.archunit.core.domain.JavaType
+    com.tngtech.archunit.core.importer.ClassFileImporter
+}
+
+object "javassist-3.30.2-GA.jar" as 2106774957 #ccc{
+    javassist.util.proxy.ProxyFactory
+}
+
+object "kotlin-stdlib-2.2.0.jar" as 1027516730 #ccc{
+    kotlin.Pair
+    kotlin.TuplesKt
+    kotlin.Unit
+    kotlin.collections.CollectionsKt
+    kotlin.collections.MapsKt
+    kotlin.io.path.PathsKt
+    kotlin.jvm.JvmClassMappingKt
+    kotlin.jvm.functions.Function1
+    kotlin.jvm.functions.Function2
+    kotlin.jvm.internal.Intrinsics
+    kotlin.jvm.internal.StringCompanionObject
+    kotlin.jvm.optionals.OptionalsKt
+    kotlin.ranges.RangesKt
+    kotlin.reflect.KClass
+    kotlin.sequences.SequencesKt
+    kotlin.text.Regex
+    kotlin.text.StringsKt
+}
+tech.dolch.plantarch.ClassDiagram ..> 1027516730
+tech.dolch.plantarch.ClassDiagram ..> 1962234284
+tech.dolch.plantarch.ClassDiagram ..> 2106774957
+tech.dolch.plantarch.ClassDiagram ..> tech.dolch.plantarch.Actor  
+tech.dolch.plantarch.ClassDiagram ..> tech.dolch.plantarch.Container  
+tech.dolch.plantarch.ClassDiagram ..> tech.dolch.plantarch.Relation  
+tech.dolch.plantarch.ClassDiagram ..> tech.dolch.plantarch.RelationType  
+tech.dolch.plantarch.ClassDiagramTest ..> tech.dolch.plantarch.ClassDiagram  
+tech.dolch.plantarch.SequenceDiagramTest ..> tech.dolch.plantarch.ClassDiagram  
+tech.dolch.plantarch.cmd.MainKt ..> tech.dolch.plantarch.ClassDiagram  
+tech.dolch.plantarch.cmd.MainTest ..> tech.dolch.plantarch.ClassDiagram  
+
+title
+Dependencies of ClassDiagram
+endtitle
+
+caption
+
+endcaption
+
+skinparam linetype polyline
+
+@enduml
