@@ -72,8 +72,7 @@ data class IdeaRenderJob(
 @Serializable
 data class OptionPanelState(
   val targetPumlFile: String,
-  var showPackages: Boolean,
-  var flatPackages: Boolean,
+  var showPackages: ShowPackages,
   var classesInFocus: List<String>,
   var classesInFocusSelected: List<String>,
   var hiddenContainers: List<String>,
@@ -81,6 +80,10 @@ data class OptionPanelState(
   var hiddenClasses: List<String>,
   var hiddenClassesSelected: List<String>,
 )
+
+enum class ShowPackages {
+  NONE, NESTED, FLAT
+}
 
 @Serializable
 data class RenderJob(val classDiagrams: ClassDiagramParams) {

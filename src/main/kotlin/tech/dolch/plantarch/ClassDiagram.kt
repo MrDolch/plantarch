@@ -86,6 +86,14 @@ open class ClassDiagram(
       // 3. Dependencies
       forEach { addUseRelation(it) }
       forEach { addUsedRelation(it) }
+      // 4. Check Dependencies in Context Classes
+      val contextClasses = relations.flatMap { listOf(it.source ?: it.target, it.target) }
+        .filter { getContainer(it).isExpanded }
+        .filter { !classesToAnalyze.contains(it) }
+        .distinct()
+        .map { importClasspath.get(it.name) }
+      contextClasses.forEach { addImplementRelation(it) { t -> contextClasses.contains(t) } }
+      contextClasses.forEach { addExtendRelation(it) { t -> contextClasses.contains(t) } }
     }
     return ("@startuml\n"
         // actors
@@ -285,11 +293,12 @@ open class ClassDiagram(
       if (!classesToAnalyze.contains(t.reflect())) addUseRelation(t) { it == source }
     }
 
-  private fun addImplementRelation(source: JavaClass) {
+  private fun addImplementRelation(source: JavaClass, targetFilter: (JavaType) -> Boolean = { true }) {
     listOf(source)
       .filter { s: JavaClass -> isContainerVisible(s) }
       .flatMap { obj: JavaClass -> obj.interfaces }
       .map { obj: JavaType -> obj.toErasure() }
+      .filter { targetFilter.invoke(it) }
       .filter { t: JavaClass -> isContainerVisible(t) }
       .forEach { t: JavaClass -> addRelation(Relation.of(source, t, RelationType.IMPLEMENTS)) }
     listOf(source)
@@ -297,17 +306,19 @@ open class ClassDiagram(
       .filter { s: JavaClass -> isContainerVisible(s) }
       .flatMap { obj: JavaClass -> obj.subclasses }
       .map { obj: JavaType -> obj.toErasure() }
+      .filter { targetFilter.invoke(it) }
       .filter { t: JavaClass -> isContainerVisible(t) }
       .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.IMPLEMENTS)) }
   }
 
-  private fun addExtendRelation(source: JavaClass) {
+  private fun addExtendRelation(source: JavaClass, targetFilter: (JavaType) -> Boolean = { true }) {
     listOf(source)
       .filter { s: JavaClass -> isContainerVisible(s) }
       .map { obj: JavaClass -> obj.superclass }
       .filter { it.isPresent }
       .map { it.get() }
       .filterIsInstance<JavaClass>()
+      .filter { targetFilter.invoke(it) }
       .filter { t -> isContainerVisible(t) }
       .forEach { t -> addRelation(Relation.of(source, t, RelationType.EXTENDS)) }
     listOf(source)
@@ -315,6 +326,7 @@ open class ClassDiagram(
       .filter { s: JavaClass -> !s.isInterface }
       .flatMap { obj: JavaClass -> obj.allSubclasses }
       .map { obj: JavaClass -> obj.toErasure() }
+      .filter { targetFilter.invoke(it) }
       .filter { t: JavaClass -> t.superclass.getOrNull() == source } // only direct children
       .filter { t: JavaClass -> isContainerVisible(t) }
       .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
