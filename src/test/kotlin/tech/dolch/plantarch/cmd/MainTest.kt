@@ -14,7 +14,7 @@ class MainTest {
         description = "",
         classesToAnalyze = listOf(ClassDiagram::class.qualifiedName!!),
         containersToHide = listOf("jrt"),
-        workingDir = Paths.get(".").toAbsolutePath().parent.toString(),
+        projectDir = Paths.get(".").toAbsolutePath().parent.toString(),
         showUseByMethodNames = ClassDiagram.UseByMethodNames.DEFINITION
       )
     )

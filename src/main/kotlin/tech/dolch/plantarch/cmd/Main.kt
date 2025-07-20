@@ -36,7 +36,8 @@ fun renderDiagram(parameters: RenderJob) =
       name = classDiagramParams.title,
       description = classDiagramParams.description,
       classesToAnalyze = classesToAnalyze,
-      workingDir = Paths.get(classDiagramParams.workingDir)
+      workingDirs = (listOf(classDiagramParams.projectDir) + classDiagramParams.moduleDirs)
+        .distinct().map { Paths.get(it) },
     ).apply {
       classDiagramParams.containersToHide
         .forEach { getContainer(it).isHidden = true }
@@ -95,6 +96,7 @@ data class RenderJob(val classDiagrams: ClassDiagramParams) {
     var containersToHide: List<String> = emptyList(),
     var classesToHide: List<String> = emptyList(),
     var showUseByMethodNames: ClassDiagram.UseByMethodNames = ClassDiagram.UseByMethodNames.NONE,
-    var workingDir: String,
+    var projectDir: String,
+    var moduleDirs: List<String> = emptyList(),
   )
 }

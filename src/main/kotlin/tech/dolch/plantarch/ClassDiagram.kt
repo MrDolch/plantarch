@@ -19,7 +19,7 @@ open class ClassDiagram(
   private val name: String = "",
   private val description: String = "",
   private val classesToAnalyze: MutableSet<Class<*>> = HashSet(),
-  private val workingDir: Path = Paths.get("").toAbsolutePath()
+  private val workingDirs: List<Path> = listOf(Paths.get("").toAbsolutePath())
 ) {
   companion object {
     private val UNKNOWN = Container("unknown", isHidden = true)
@@ -360,11 +360,14 @@ open class ClassDiagram(
         val file = resource.file
         if ("jrt" == protocol)
           containers.computeIfAbsent("jrt") { name -> Container(name!!) }
-        else if (protocol== "jar" || file.startsWith("file:") || file.startsWith("jar:"))
+        else if (protocol == "jar" || file.startsWith("file:") || file.startsWith("jar:"))
           containers.computeIfAbsent(file.replace(".*/([^!]+.jar)!.*".toRegex(), "$1")) { Container(it!!) }
-        else if (Paths.get(resource.toURI()).startsWith(workingDir))
-          containers.computeIfAbsent(workingDir.name) { Container(it!!) }
-        else UNKNOWN
+        else {
+          val workingDir = workingDirs.firstOrNull { Paths.get(resource.toURI()).startsWith(it) }
+          if (workingDir != null)
+            containers.computeIfAbsent(workingDir.name) { Container(it!!) }
+          else UNKNOWN
+        }
       } else UNKNOWN
     } else UNKNOWN
     result.addClass(clazz!!)
