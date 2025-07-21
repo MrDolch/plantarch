@@ -32,8 +32,8 @@
         <maven.compiler.target>8</maven.compiler.target>
         <maven.compiler.source>8</maven.compiler.source>
         <kotlin.version>2.2.0</kotlin.version>
-        <junit-jupiter-engine.version>5.13.3</junit-jupiter-engine.version>
-        <junit-platform-runner.version>1.13.3</junit-platform-runner.version>
+        <junit-jupiter-engine.version>5.13.4</junit-jupiter-engine.version>
+        <junit-platform-runner.version>1.13.4</junit-platform-runner.version>
     </properties>
 
     <dependencies>
