@@ -335,14 +335,7 @@ open class ClassDiagram(
       .forEach { t: JavaClass -> addRelation(Relation.of(t, source, RelationType.EXTENDS)) }
   }
 
-  private fun getContainer(clazz: JavaClass): Container? {
-    try {
-      val reflect = clazz.reflect()
-      return getContainer(reflect)
-    } catch (_: IllegalAccessError) {
-      return null
-    }
-  }
+  private fun getContainer(clazz: JavaClass): Container? = runCatching { getContainer(clazz.reflect()) }.getOrNull()
 
   private fun getContainer(user: Actor?): Container =
     if (user == null) UNKNOWN
