@@ -97,7 +97,7 @@ object "javassist-3.30.2-GA.jar" as 2106774957 #ccc{
     javassist.util.proxy.ProxyFactory
 }
 
-object "kotlin-stdlib-2.2.0.jar" as 1027516730 #ccc{
+object "kotlin-stdlib-2.2.10.jar" as 18548355 #ccc{
     kotlin.Pair
     kotlin.TuplesKt
     kotlin.Unit
@@ -116,7 +116,7 @@ object "kotlin-stdlib-2.2.0.jar" as 1027516730 #ccc{
     kotlin.text.Regex
     kotlin.text.StringsKt
 }
-tech.dolch.plantarch.ClassDiagram ..> 1027516730
+tech.dolch.plantarch.ClassDiagram ..> 18548355
 tech.dolch.plantarch.ClassDiagram ..> 1962234284
 tech.dolch.plantarch.ClassDiagram ..> 2106774957
 tech.dolch.plantarch.ClassDiagram ..> tech.dolch.plantarch.Actor  
