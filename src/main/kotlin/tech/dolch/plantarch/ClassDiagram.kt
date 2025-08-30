@@ -44,6 +44,7 @@ open class ClassDiagram(
 
   open fun analyzePackage(vararg packages: String) = ClassFileImporter()
     .importPackages(*packages)
+    .filter { runCatching { it.reflect() }.getOrNull() != null }
     .map { it.reflect() }
     .forEach { clazz -> analyzeClass(clazz) }
 
@@ -259,18 +260,19 @@ open class ClassDiagram(
     color: String?,
     targets: Map<JavaType, String?>,
   ) = targets.forEach { type, action ->
-    type.allInvolvedRawTypes.filter { !it.isPrimitive }
-      .distinct()
-      .filter { t -> source != t }
-      .filter { t -> !t.isArray || source != t.componentType }
-      .filter { t -> !t.isAssignableFrom(source.reflect()) }
-      .filter { t -> isContainerVisible(t) }
+    if (runCatching { source.reflect() }.getOrNull() != null)
+      type.allInvolvedRawTypes.filter { !it.isPrimitive }
+        .distinct()
+        .filter { t -> source != t }
+        .filter { t -> !t.isArray || source != t.componentType }
+        .filter { t -> !t.isAssignableFrom(source.reflect()) }
+        .filter { t -> isContainerVisible(t) }
 //            .filter { t -> relations.none { r -> r.source == source.reflect() && r.target == t.reflect() } }
-      .forEach { t ->
-        addRelation(
-          Relation.of(source, t, relationType, color, action)
-        )
-      }
+        .forEach { t ->
+          addRelation(
+            Relation.of(source, t, relationType, color, action)
+          )
+        }
   }
 
   private fun ClassDiagram.isContainerVisible(t: JavaClass) = getContainer(t)?.isVisible() ?: false
@@ -286,6 +288,7 @@ open class ClassDiagram(
           obj.methodReferencesToSelf.map { it.originOwner }).distinct()
     }.distinct()
     .filter { t: JavaClass -> t != source }
+    .filter { runCatching { it.reflect() }.getOrNull() != null }
     .filter { t: JavaClass -> !source.isAssignableFrom(t.reflect()) }
     .filter { t: JavaClass -> isContainerVisible(t) }
     .forEach { t: JavaClass ->
